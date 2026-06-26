@@ -1,0 +1,11 @@
+data_raw: data/raw
+data_interim: data/interim
+data_processed: data/processed
+outputs: outputs
+reports: reports
+inventory: outputs/inventory
+provenance: outputs/provenance
+profiles: outputs/profiles
+splits: outputs/splits
+experiments: outputs/experiments
+

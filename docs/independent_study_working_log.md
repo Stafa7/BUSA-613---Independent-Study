@@ -135,3 +135,26 @@ Copy this block for each new work session:
 - Decisions: Dataset acquisition and preprocessing should live in `.py` scripts as the reproducible source of truth; notebooks can be used later for exploratory analysis and presentation.
 - Questions or blockers: A commit and push are still required for GitHub to remove the previously tracked raw-data gitlinks from the main branch.
 - Next step: Commit and push the `.gitignore`, documentation, acquisition script, and Git index cleanup.
+
+## 2026-06-26 — Phase 0–6 first-half implementation
+
+- Focus: Implement the first half of the study through reproducible data preparation, frozen splits, traditional text baselines, and a transformer compute gate.
+- Changes made: Added package/config/test scaffolding, implemented Phase 1–6 scripts, generated local inventory/provenance/profile/split/baseline outputs, and created a transformer compute-stop note because local transformer dependencies are unavailable.
+- Files updated:
+  - `.gitignore`
+  - `README.md`
+  - `configs/`
+  - `scripts/01_inventory.py` through `scripts/06_run_transformer.py`
+  - `src/health_misinfo/`
+  - `tests/`
+- Local outputs generated:
+  - `outputs/inventory/`
+  - `outputs/provenance/`
+  - `data/processed/`
+  - `outputs/profiles/`
+  - `outputs/splits/`
+  - `outputs/experiments/`
+- Verification: Processed `8,271` included records; generated `18` traditional baseline experiment outputs; `python -m pytest` passed with `10` tests.
+- Decisions: CoAID source-disjoint evaluation falls back to duplicate-group stratified evaluation because the source-disjoint split violated duplicate-family separation; FakeHealth source-disjoint evaluation passes. DistilBERT is deferred until `torch`, `transformers`, `datasets`, and `evaluate` are installed.
+- Questions or blockers: None for Phase 0–5. Phase 6 model training is compute/dependency blocked locally, with a documented stop note.
+- Next step: Install transformer dependencies or use an approved compute environment, then rerun `scripts/06_run_transformer.py` for the DistilBERT comparison.

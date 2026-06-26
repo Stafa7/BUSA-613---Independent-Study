@@ -1,0 +1,20 @@
+coaid:
+  name: CoAID
+  role: primary
+  raw_path: data/raw/coaid
+  source_url: https://github.com/cuilimeng/CoAID
+  pinned_commit: d238224346781255e1e7e6ed8bc410c2b2e6329e
+  text_unit: article_or_claim
+  label_rule: Dataset native Real/Fake files are mapped to reliable/unreliable.
+
+fakehealth:
+  name: FakeHealth
+  role: secondary
+  raw_path: data/raw/fakehealth
+  optional_zenodo_path: data/raw/fakehealth_zenodo
+  source_url: https://github.com/EnyanDai/FakeHealth
+  zenodo_record: https://zenodo.org/records/3862989
+  pinned_commit: ec9379de8f8f13af8c436dd6dd9bfaddacd2df30
+  text_unit: article
+  label_rule: Expert rating >= 3 is mapped to reliable; rating <= 2 is mapped to unreliable for this binary robustness audit.
+

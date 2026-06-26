@@ -1,0 +1,27 @@
+random_seed: 613
+split:
+  train_size: 0.70
+  validation_size: 0.15
+  test_size: 0.15
+  min_records_per_class_for_controlled: 30
+models:
+  tfidf:
+    max_features: 20000
+    ngram_range: [1, 2]
+    min_df: 2
+  logistic_regression:
+    max_iter: 1000
+    class_weight: balanced
+  linear_svm:
+    class_weight: balanced
+  transformer:
+    model_name: distilbert-base-uncased
+    primary_seed: 613
+    optional_seeds: [613, 2027, 4099]
+    max_length: 256
+    epochs: 3
+    batch_size: 8
+metrics:
+  bootstrap_iterations: 200
+  positive_label: unreliable
+

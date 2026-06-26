@@ -517,21 +517,22 @@ When documents conflict, use the following precedence:
 - [x] Dataset acquisition script added.
 - [x] Optional FakeHealth Zenodo user-network archive downloaded and verified locally.
 - [x] Exact dataset revisions and checksums recorded.
+- [x] Analysis package, configs, phase scripts, and tests created.
+- [x] Field-level inventory generated locally.
+- [x] Label provenance and harmonized mappings generated locally.
+- [x] Processed analysis tables and profile reports generated locally.
+- [x] Leakage audit and frozen split manifests generated locally.
+- [x] Traditional text baselines completed locally.
+- [x] Transformer compute-stop note generated because local transformer dependencies are unavailable.
 
 ### Next
 
-- [ ] Establish the analysis environment and directory structure.
-- [ ] Create complete field-level dataset inventories.
-- [ ] Audit label provenance and define candidate harmonized mappings.
-- [ ] Parse and profile text and metadata.
-- [ ] Quantify missingness and duplicate records.
-- [ ] Test engagement-data feasibility.
-- [ ] Decide whether cross-dataset transfer passes its compatibility gate.
-- [ ] Conduct the leakage audit and freeze split manifests.
+- [ ] Install `torch`, `transformers`, `datasets`, and `evaluate`, then rerun `scripts/06_run_transformer.py`.
+- [ ] Review Phase 5 baseline results and decide how to report the first-half milestone.
+- [ ] Decide whether to begin Phase 7 engagement ablations.
 
 ### Later
 
-- [ ] Train traditional baselines.
 - [ ] Fine-tune DistilBERT.
 - [ ] Run engagement ablations.
 - [ ] Conduct transfer and narrative analyses.
@@ -543,19 +544,39 @@ When documents conflict, use the following precedence:
 
 ## Environment and execution
 
-The executable analysis environment has not yet been created. The intended implementation uses Python with Jupyter notebooks or VS Code.
+The executable first-half analysis pipeline is implemented as Python package code plus phase scripts. Notebooks may be used for review, but the reproducible source of truth is the script pipeline.
 
-Planned core packages include:
+Create or activate a Python environment, then install:
 
-- `pandas`, `numpy`, and `pyarrow`;
-- `scikit-learn`;
-- `matplotlib`, `seaborn`, and optionally `plotly`;
-- `transformers` and `datasets`;
-- `sentence-transformers` and `bertopic`;
-- `shap` and `lime`;
-- `spaCy` or another documented NLP preprocessing library.
+```bash
+python -m pip install -r requirements.txt
+```
 
-Once environment files and analysis entry points exist, this section should be updated with exact installation and execution commands. Until then, the repository should not imply that the experiments are runnable.
+Run the first-half pipeline:
+
+```bash
+python scripts/01_inventory.py
+python scripts/02_provenance_labels.py
+python scripts/03_build_processed_tables.py
+python scripts/04_make_splits.py
+python scripts/05_run_text_baselines.py
+python scripts/06_run_transformer.py
+python -m pytest
+```
+
+Current local execution status:
+
+- Phase 1 inventory completed.
+- Phase 2 provenance and label outputs completed.
+- Phase 3 processed tables completed with 8,271 included records.
+- Phase 4 frozen split manifests completed.
+- Phase 5 traditional text baselines completed with 18 experiment outputs.
+- Phase 6 produced a compute-stop note because local transformer dependencies are not installed.
+- Test suite passes: 10 tests.
+
+The local environment used for this run has the classical ML stack installed, but is missing `torch`, `transformers`, `datasets`, and `evaluate`. Re-run `scripts/06_run_transformer.py` after installing those packages to attempt local DistilBERT training.
+
+Generated outputs are intentionally ignored by Git. The committed repository contains code, configs, tests, and documentation; it does not contain raw data, processed tables, model outputs, or predictions.
 
 ---
 

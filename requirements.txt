@@ -1,0 +1,14 @@
+pandas
+numpy
+scikit-learn
+pyarrow
+matplotlib
+seaborn
+pyyaml
+pytest
+tqdm
+torch
+transformers
+datasets
+evaluate
+
