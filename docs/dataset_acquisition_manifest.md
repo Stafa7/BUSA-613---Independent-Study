@@ -61,7 +61,21 @@ The repository includes article text, metadata, expert reviews, ratings, review 
 
 ## Acquisition decision
 
-The optional FakeHealth Zenodo archive was not downloaded. It is approximately 2.2 GB and primarily supplements the repository with follower and following identifiers. Those network records are outside the required core study and do not provide hydrated post content.
+The optional FakeHealth Zenodo archive was downloaded because the project now preserves all publicly available FakeHealth components locally. It is approximately 2.2 GB and primarily supplements the repository with follower and following identifiers. Those network records do not provide hydrated post content and do not change the core no-live-API study design.
+
+Optional Zenodo archive metadata:
+
+- Record: <https://zenodo.org/records/3862989>
+- File: `FakeHealth.zip`
+- Local archive path: `data/raw/fakehealth_zenodo/FakeHealth.zip`
+- Local extraction path: `data/raw/fakehealth_zenodo/extracted/`
+- Expected size: `2,205,934,463` bytes
+- Expected MD5: `1dd710f663694096ba604144ad7e4930`
+- Verification status: passed
+- Extracted size: approximately 4.9 GB
+- User follower JSON files: `255,235`
+- User following JSON files: `255,229`
+- Total user-network JSON files: `510,464`
 
 The project will begin with the official repository data already downloaded. It will not depend on the X API or live rehydration. Engagement-feature feasibility will be assessed from locally available fields and identifier counts during Phase 3 of the execution plan.
 
@@ -72,4 +86,3 @@ The project will begin with the official repository data already downloaded. It 
 3. Audit text availability, duplicates, missingness, labels, sources, and join keys.
 4. Determine whether engagement identifier counts alone support meaningful features without API access.
 5. Complete the cross-dataset label and text-unit compatibility assessment.
-

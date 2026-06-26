@@ -149,7 +149,17 @@ Observed repository contents:
 | Repost IDs | 120,709 | 16,959 |
 | Reply IDs | 27,601 | 1,575 |
 
-The optional 2.2 GB Zenodo archive was not downloaded. It primarily supplies follower and following identifiers, which are outside the required core study. The project is intentionally designed not to depend on live X API access or the successful rehydration of historical social-media records.
+The optional 2.2 GB Zenodo user-network archive is stored locally under `data/raw/fakehealth_zenodo/`. It primarily supplies follower and following identifiers. These files are useful for documenting the available FakeHealth network metadata, but the core study still does not depend on live X API access or the successful rehydration of historical social-media records.
+
+Observed optional Zenodo archive contents:
+
+| Component | Count |
+|---|---:|
+| Downloaded archive size | 2.1 GB |
+| Extracted directory size | 4.9 GB |
+| User follower JSON files | 255,235 |
+| User following JSON files | 255,229 |
+| Total user-network JSON files | 510,464 |
 
 ### Why these datasets are used together
 
@@ -227,11 +237,20 @@ Current top-level structure:
 | `docs/literature_pdfs/` | Original literature PDFs used in the review |
 | `docs/literature_mds/` | Machine-readable conversions of literature PDFs |
 | `docs/literature_review/` | Clean per-paper analytical notes and synthesis |
+| `scripts/` | Reproducible project scripts, including dataset acquisition |
 | `Approval and Application/` | Administrative course forms |
 
 The raw dataset directories retain their upstream Git metadata so the exact downloaded revisions can be verified. They should not be edited directly.
 
-The repository does not yet contain the planned analysis code, notebooks, processed data, results, or environment specification. Those will be added as the implementation phases begin.
+Raw data is intentionally excluded from Git. The canonical acquisition command is:
+
+```bash
+python scripts/download_datasets.py --all --extract
+```
+
+Use the script as the source of truth for where datasets come from. Notebooks may be added later for exploration, but dataset acquisition and preprocessing should live in `.py` files so the workflow is reproducible from a clean clone.
+
+The repository does not yet contain the planned analysis notebooks, processed data, results, or environment specification. Those will be added as the implementation phases begin.
 
 ---
 
@@ -495,6 +514,8 @@ When documents conflict, use the following precedence:
 - [x] Detailed execution protocol created.
 - [x] CoAID downloaded from the official repository.
 - [x] FakeHealth downloaded from the official repository.
+- [x] Dataset acquisition script added.
+- [x] Optional FakeHealth Zenodo user-network archive downloaded and verified locally.
 - [x] Exact dataset revisions and checksums recorded.
 
 ### Next
@@ -627,4 +648,3 @@ Dataset archive: <https://zenodo.org/records/3862989>
 ```
 
 Additional literature used to motivate the methodology and robustness framework is documented in `docs/literature_review/`.
-

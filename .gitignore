@@ -1,3 +1,26 @@
 # Obsidian workspace configuration
 .obsidian/
 **/.obsidian/
+
+# Local datasets
+data/raw/
+data/interim/
+data/processed/
+data/external/
+
+# Generated research artifacts
+outputs/
+reports/figures/
+reports/tables/
+reports/models/
+
+# Local environment and OS files
+.DS_Store
+**/.DS_Store
+.Rhistory
+.RData
+.env
+.venv/
+venv/
+__pycache__/
+.ipynb_checkpoints/

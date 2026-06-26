@@ -117,3 +117,21 @@ Copy this block for each new work session:
 - Decisions: Document the repository as it currently exists and obtain approval before relocating or renaming existing files.
 - Questions or blockers: The project still needs an approved directory reorganization, a root Git repository decision, environment files, and analysis-code scaffolding.
 - Next step: Review and approve the proposed repository reorganization before any files are moved.
+
+## 2026-06-26 — Optional FakeHealth archive and data tracking policy
+
+- Focus: Preserve the optional FakeHealth Zenodo user-network archive locally while preventing raw data from being committed to GitHub.
+- Changes made: Added `scripts/download_datasets.py` as the canonical dataset acquisition script, expanded `.gitignore` to exclude raw/intermediate/processed data and generated artifacts, removed raw dataset entries and local OS files from Git tracking without deleting them locally, downloaded and extracted the optional FakeHealth Zenodo archive, and verified the archive MD5 checksum.
+- Files updated:
+  - `.gitignore`
+  - `README.md`
+  - `docs/dataset_acquisition_manifest.md`
+  - `docs/independent_study_working_log.md`
+  - `scripts/download_datasets.py`
+- Local data added:
+  - `data/raw/fakehealth_zenodo/FakeHealth.zip`
+  - `data/raw/fakehealth_zenodo/extracted/`
+- Verification: `FakeHealth.zip` size `2,205,934,463` bytes; MD5 `1dd710f663694096ba604144ad7e4930`; extracted user-network files include `255,235` follower JSON files and `255,229` following JSON files.
+- Decisions: Dataset acquisition and preprocessing should live in `.py` scripts as the reproducible source of truth; notebooks can be used later for exploratory analysis and presentation.
+- Questions or blockers: A commit and push are still required for GitHub to remove the previously tracked raw-data gitlinks from the main branch.
+- Next step: Commit and push the `.gitignore`, documentation, acquisition script, and Git index cleanup.
