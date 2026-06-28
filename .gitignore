@@ -19,6 +19,10 @@ docs/literature_mds/
 docs/literature_pdfs/
 docs/literature_review/
 
+# Local-only progress report source/build assets
+docs/progress report/*
+!docs/progress report/progress_report.pdf
+
 # Local environment and OS files
 .DS_Store
 **/.DS_Store
