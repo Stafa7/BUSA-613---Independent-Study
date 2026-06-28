@@ -28,7 +28,7 @@
 \begin{titlepage}
     \centering
     \vspace*{1.25in}
-    {\Large\textbf{Progress Report: Robustness Audit of Health Misinformation Classification Models}\par}
+    {\Large\textbf{Robustness Audit of Health Misinformation Classification Models: Progress Report}\par}
     \vspace{0.75in}
     {Mustafa Yousuf\par}
     \vspace{0.25in}
@@ -42,15 +42,19 @@
 
 \clearpage
 
+\begin{abstract}
+\noindent Health misinformation classifiers are often evaluated through aggregate within-dataset accuracy, but such results may reflect dataset artifacts rather than robust health-information signals. This progress report describes the first half of a study evaluating whether traditional machine-learning and transformer-based models can classify dataset-defined unreliable health information under standard and artifact-controlled conditions. CoAID is used as the primary COVID-19 health-information dataset, and FakeHealth is used as a secondary broader health-news dataset. Completed work includes data acquisition, provenance auditing, label harmonization, processed-table construction, leakage-aware split generation, engagement-feasibility assessment, and traditional text baselines. The current results show strong CoAID baseline performance and lower FakeHealth performance, indicating that task difficulty and label provenance differ substantially across datasets. Transformer evaluation is implemented but remains pending because the local environment lacks the required transformer dependencies.
+\end{abstract}
+
 \section*{Introduction}
 
 Health misinformation detection is often presented as a binary text-classification task: a model receives health-related content and predicts whether it is reliable or unreliable. That framing is useful, but incomplete. In practice, health misinformation is shaped by source selection, topic shifts, public uncertainty, social engagement, platform-specific data availability, and label construction. A high score on one dataset may therefore indicate a useful health-information signal, but it may also indicate that the model has learned publisher identity, COVID-era vocabulary, or other artifacts that do not generalize.
 
 This independent study evaluates that distinction. The project asks whether classifiers for dataset-defined unreliable health information learn robust signals or mainly exploit dataset-specific shortcuts. This progress report covers the first half of the study: data acquisition, provenance documentation, label harmonization, processing, leakage-aware split construction, and traditional text-model baselines. Later work will extend the pipeline to transformer modeling, engagement ablations, cross-dataset transfer, narrative analysis, calibration, selective prediction, and explanation auditing.
 
-The study uses CoAID as the primary COVID-19 health-information dataset and FakeHealth as the secondary broader health-news dataset. I refer to the target as ``dataset-defined unreliable health information'' rather than verified claim-level misinformation because the labels have different origins. CoAID is organized around real and fake COVID-19 news and claims, while FakeHealth is built from HealthNewsReview ratings and criteria. Treating both as identical truth labels would overstate the evidence.
+The study uses CoAID as the primary COVID-19 health-information dataset and FakeHealth as the secondary broader health-news dataset. The target is described as ``dataset-defined unreliable health information'' rather than verified claim-level misinformation because the labels have different origins. CoAID is organized around real and fake COVID-19 news and claims, while FakeHealth is built from HealthNewsReview ratings and criteria. Treating both as identical truth labels would overstate the evidence.
 
-\section*{Background and Previous Literature}
+\section*{Literature Review}
 
 The reviewed literature supports a robustness-oriented design. Systematic reviews show that health misinformation is a public-health problem across topics and platforms, but definitions, data sources, and measurement strategies vary widely (Suarez-Lledo \& Alvarez-Galvez, 2021; Wang et al., 2019). This variation matters because models are only as meaningful as the construct represented by their training labels. A model trained to reproduce expert ratings, source-level credibility, or fact-check labels may perform well while answering different underlying questions.
 
@@ -58,15 +62,15 @@ The technical literature also supports comparing traditional machine learning wi
 
 FakeHealth is central because it combines article text, expert health-news reviews, ratings, review criteria, and social engagement identifiers (Dai et al., 2020). Its labels are connected to health-news quality judgments, including whether stories quantify benefits and harms, discuss costs, compare alternatives, avoid disease-mongering, and avoid unjustified sensational language. Those criteria make FakeHealth valuable for explainability and for studying whether social engagement adds value beyond text alone. However, engagement differences are not uniform across all FakeHealth subsets, so engagement must be tested rather than assumed.
 
-The narrative and explainability literature adds two cautions. Chen et al. (2022) show that COVID-19 misinformation can be organized into recurring narratives at large scale, while Langguth et al. (2023) show that topic labels are not enough because content can mention a conspiracy without endorsing it. Athira et al. (2023) further argues that explainable artificial intelligence methods should be evaluated with attention to the intended user and decision context. In this project, explanations will be used as an audit tool, not as causal proof of model reasoning.
+The narrative and explainability literature adds two cautions. Chen et al. (2022) show that COVID-19 misinformation can be organized into recurring narratives at large scale, while Langguth et al. (2023) show that topic labels are not enough because content can mention a conspiracy without endorsing it. Athira et al. (2023) further argues that explainable artificial intelligence methods should be evaluated with attention to the intended user and decision context. In the present study, explanations are treated as audit evidence rather than causal proof of model reasoning.
 
-\section*{Hypothesis}
+\section*{Hypotheses}
 
-The working hypothesis is that traditional text models will produce strong within-dataset performance, especially on CoAID, but that this performance will not be sufficient evidence of reliable health-misinformation understanding. I expect some performance to persist under artifact-masked or controlled evaluation, but I also expect dataset dependence. CoAID models may benefit from COVID-specific vocabulary and source structure, while FakeHealth models may face a harder and broader task because its labels arise from health-news review ratings rather than a single pandemic-era topic.
+The primary hypothesis is that traditional text models will produce strong within-dataset performance, especially on CoAID, but that this performance will not be sufficient evidence of reliable health-misinformation understanding. Some performance is expected to persist under artifact-masked or controlled evaluation, but the results are also expected to show dataset dependence. CoAID models may benefit from COVID-specific vocabulary and source structure, while FakeHealth models may face a harder and broader task because its labels arise from health-news review ratings rather than a single pandemic-era topic.
 
-A secondary hypothesis is that social engagement features will be useful only conditionally. Engagement behavior may contain signal, but metadata coverage and missingness can themselves become artifacts. Therefore, engagement should be used only after a feasibility gate checks coverage, class balance, and proxy risk. I also hypothesize that transformer models may improve text classification, but only if they are evaluated against the same frozen splits as the traditional baselines.
+A secondary hypothesis is that social engagement features will be useful only conditionally. Engagement behavior may contain signal, but metadata coverage and missingness can themselves become artifacts. Therefore, engagement should be used only after a feasibility gate checks coverage, class balance, and proxy risk. A third hypothesis is that transformer models may improve text classification, but only if they are evaluated against the same frozen splits as the traditional baselines.
 
-\section*{Methodology}
+\section*{Materials and Methods}
 
 The implemented methodology follows a staged robustness-audit pipeline. Raw datasets are preserved under \texttt{data/raw/} and excluded from GitHub. The project includes a reproducible acquisition script, and the optional FakeHealth Zenodo user-network archive has been downloaded locally. The pipeline then creates inventories, provenance tables, and label dictionaries documenting source URLs, file structure, available fields, native labels, harmonized labels, and inclusion rules.
 
@@ -83,7 +87,7 @@ Traditional baselines are trained using the frozen splits. The implemented model
     \label{fig:progress-summary}
 \end{figure}
 
-\section*{Progress to Date}
+\section*{Results to Date}
 
 The first-half implementation is complete through the traditional baseline stage and has produced local outputs for inventory, provenance, profiling, splitting, and model evaluation. The processed dataset contains 8,271 included records: 5,975 from CoAID and 2,296 from FakeHealth. As shown in Figure~\ref{fig:progress-summary}, both datasets are class-imbalanced but retain enough reliable and unreliable records for within-dataset text modeling.
 
@@ -92,6 +96,8 @@ The engagement feasibility analysis produced a useful early decision. CoAID fail
 The split audit also produced an important methodological result. FakeHealth passed source-disjoint splitting. CoAID did not: the first source-disjoint attempt violated duplicate-family separation, so the pipeline fell back to duplicate-group stratified evaluation for CoAID. This is exactly the type of artifact-control decision the study was designed to make visible. The final split manifests guarantee that no duplicate group crosses train, validation, and test partitions.
 
 Traditional text baselines have been run for CoAID and FakeHealth across standard, controlled, and masked-text conditions. CoAID results are strong: Logistic Regression reaches approximately 0.914 macro F1 under standard, controlled, and masked conditions, while Linear SVM reaches approximately 0.902. FakeHealth is more difficult: the best standard result is Linear SVM at approximately 0.666 macro F1, and controlled FakeHealth performance is lower. These early results support the hypothesis that within-dataset performance is dataset-dependent.
+
+\section*{Discussion and Next Steps}
 
 At this stage, the first research question is partially answered. Traditional text baselines are complete, but transformer comparison is not complete because the local environment lacks \texttt{torch}, \texttt{transformers}, \texttt{datasets}, and \texttt{evaluate}. The repository now contains package code, configuration files, phase scripts, tests, and documentation; raw datasets, processed tables, model outputs, and predictions remain local and ignored by Git. The next technical step is to install transformer dependencies and rerun Phase 6. The next scientific step is to compare DistilBERT against the frozen traditional baselines before moving to the second half of the study.
 
