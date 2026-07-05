@@ -6,7 +6,7 @@ This project examines whether natural-language-processing models for health-info
 
 The study uses **CoAID** as its primary dataset and **FakeHealth** as its secondary validation and robustness dataset.
 
-> **Project status:** Research design and dataset acquisition are complete. Data provenance, profiling, label harmonization, leakage auditing, and experiment implementation are the next stages.
+> **Project status:** Research design, dataset acquisition, provenance documentation, profiling, label harmonization, leakage auditing, strict environment locking, and first-half text-baseline implementation are complete. Later-stage transformer, engagement, transfer, calibration, narrative, explanation, and final reporting analyses remain gated or incomplete.
 
 ---
 
@@ -19,6 +19,7 @@ The study uses **CoAID** as its primary dataset and **FakeHealth** as its second
 - [Dataset terminology and limitations](#dataset-terminology-and-limitations)
 - [Repository structure](#repository-structure)
 - [Research workflow](#research-workflow)
+- [Study quality audit](#study-quality-audit)
 - [Planned models and analyses](#planned-models-and-analyses)
 - [Evaluation framework](#evaluation-framework)
 - [Reproducibility rules](#reproducibility-rules)
@@ -238,7 +239,7 @@ Current top-level structure:
 | `docs/literature_mds/` | Machine-readable conversions of literature PDFs |
 | `docs/literature_review/` | Clean per-paper analytical notes and synthesis |
 | `scripts/` | Reproducible project scripts, including dataset acquisition |
-| `Approval and Application/` | Administrative course forms |
+| `Approval and Application/` | Local administrative course forms, ignored by Git |
 
 The raw dataset directories retain their upstream Git metadata so the exact downloaded revisions can be verified. They should not be edited directly.
 
@@ -250,7 +251,7 @@ python scripts/download_datasets.py --all --extract
 
 Use the script as the source of truth for where datasets come from. Notebooks may be added later for exploration, but dataset acquisition and preprocessing should live in `.py` files so the workflow is reproducible from a clean clone.
 
-The repository does not yet contain the planned analysis notebooks, processed data, results, or environment specification. Those will be added as the implementation phases begin.
+The repository does not yet contain the planned analysis notebooks, processed data, or results. The strict Python environment specification is tracked in `.python-version`, `pyproject.toml`, `uv.lock`, `requirements.txt`, and `requirements.lock.txt`.
 
 ---
 
@@ -307,7 +308,9 @@ The study proceeds through the following stages:
 
 Each stage has prerequisites, required artifacts, decision gates, and an objective definition of done in the execution plan.
 
----
+## Study quality audit
+
+Known scientific and reproducibility risks are tracked in [docs/study_quality_audit.md](docs/study_quality_audit.md). The audit distinguishes issues fixed in the current repository from remaining limits that must be addressed or explicitly disclosed before final claims.
 
 ## Planned models and analyses
 
@@ -546,13 +549,26 @@ When documents conflict, use the following precedence:
 
 The executable first-half analysis pipeline is implemented as Python package code plus phase scripts. Notebooks may be used for review, but the reproducible source of truth is the script pipeline.
 
-Create or activate a Python environment, then install:
+The strict runtime is Python `3.11.15`, recorded in `.python-version`. The exact resolved dependency graph is committed in `uv.lock`; a hash-checked pip export is committed in `requirements.lock.txt`.
+
+Preferred strict setup:
 
 ```bash
-python -m pip install -r requirements.txt
+uv sync --frozen
 ```
 
-Run the first-half pipeline:
+Pip-only fallback:
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install --require-hashes -r requirements.lock.txt
+python -m pip install -e .
+```
+
+`requirements.txt` pins only the direct project dependencies for readability. Use `uv.lock` or `requirements.lock.txt` for strict reproduction.
+
+Run the first-half pipeline after activating the environment:
 
 ```bash
 python scripts/01_inventory.py

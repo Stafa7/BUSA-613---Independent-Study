@@ -1,12 +1,27 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools==81.0.0", "wheel==0.47.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "health-misinfo-study"
 version = "0.1.0"
 description = "Reproducible first-half pipeline for the BUSA 613 health misinformation independent study."
-requires-python = ">=3.10"
+requires-python = "==3.11.*"
+dependencies = [
+    "datasets",
+    "evaluate",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "pytest",
+    "pyyaml",
+    "scikit-learn",
+    "seaborn",
+    "torch",
+    "tqdm",
+    "transformers",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -15,4 +30,3 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q"
-

@@ -19,9 +19,15 @@ docs/literature_mds/
 docs/literature_pdfs/
 docs/literature_review/
 
+# Local-only miscellaneous docs
+docs/study_quality_audit.md
+
 # Local-only progress report source/build assets
 docs/progress report/*
 !docs/progress report/progress_report.pdf
+
+# Local-only approval/application documents
+Approval and Application/
 
 # Local environment and OS files
 .DS_Store
