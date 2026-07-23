@@ -92,7 +92,27 @@ def clone_at_commit(
     ensure_git_available()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     if target_dir.exists() and not force:
-        return DownloadResult(target_dir, "skipped", "already exists")
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=target_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=target_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        if head != commit:
+            raise RuntimeError(
+                f"{target_dir} is at {head}, expected pinned commit {commit}"
+            )
+        if dirty:
+            raise RuntimeError(f"{target_dir} has local modifications; raw data must remain immutable")
+        return DownloadResult(target_dir, "verified", f"clean pinned checkout {commit}")
     remove_existing(target_dir, force=force)
     run(["git", "clone", repo_url, str(target_dir)])
     run(["git", "checkout", commit], cwd=target_dir)
@@ -145,6 +165,11 @@ def extract_zip(zip_path: Path, extract_dir: Path, force: bool) -> DownloadResul
     remove_existing(extract_dir, force=force)
     extract_dir.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path) as zf:
+        destination_root = extract_dir.resolve()
+        for member in zf.infolist():
+            destination = (extract_dir / member.filename).resolve()
+            if destination != destination_root and destination_root not in destination.parents:
+                raise RuntimeError(f"Unsafe archive path: {member.filename}")
         zf.extractall(extract_dir)
     return DownloadResult(extract_dir, "extracted", "zip extracted")
 

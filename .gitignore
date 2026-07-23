@@ -21,10 +21,17 @@ docs/literature_review/
 
 # Local-only miscellaneous docs
 docs/study_quality_audit.md
+docs/future_model_expansions.md
+docs/independent_study_execution_plan.md
+docs/independent_study_working_log.md
 
 # Local-only progress report source/build assets
 docs/progress report/*
 !docs/progress report/progress_report.pdf
+
+# Local-only final report draft, sources, build assets, and PDF
+# Remove or narrow this rule only when the final PDF is approved for publication.
+docs/final report/
 
 # Local-only approval/application documents
 Approval and Application/

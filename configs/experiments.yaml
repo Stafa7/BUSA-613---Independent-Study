@@ -1,9 +1,18 @@
 random_seed: 613
+data_quality:
+  minimum_primary_body_words: 30
+  fuzzy_title_similarity: 0.97
+  coaid_primary_units: [article]
+  fakehealth_primary_units: [story, news_release]
 split:
   train_size: 0.70
   validation_size: 0.15
   test_size: 0.15
   min_records_per_class_for_controlled: 30
+  source_disjoint_repeats: 10
+  maximum_controlled_prevalence_shift: 0.20
+  maximum_controlled_group_fraction: 0.80
+  minimum_effective_controlled_groups: 2.0
 models:
   tfidf:
     max_features: 20000
@@ -12,16 +21,37 @@ models:
   logistic_regression:
     max_iter: 1000
     class_weight: balanced
+    c_grid: [0.1, 1.0, 10.0]
   linear_svm:
     class_weight: balanced
-  transformer:
-    model_name: distilbert-base-uncased
+    c_grid: [0.1, 1.0, 10.0]
+  transformers:
+    - experiment_name: distilbert
+      model_name: distilbert/distilbert-base-uncased
+      revision: 12040ac
+      max_length: 512
+    - experiment_name: modernbert
+      model_name: answerdotai/ModernBERT-base
+      revision: 8949b90
+      max_length: 512
+    - experiment_name: biomedbert
+      model_name: microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext
+      revision: 10b8ceaf55f21891daba5639985e530ebb9b423d
+      max_length: 512
+  transformer_training:
     primary_seed: 613
-    optional_seeds: [613, 2027, 4099]
-    max_length: 256
+    seeds: [613, 614, 615]
     epochs: 3
     batch_size: 8
+    learning_rate: 0.00002
+    early_stopping_patience: 1
 metrics:
-  bootstrap_iterations: 200
+  bootstrap_iterations: 1000
   positive_label: unreliable
-
+  primary_metric: macro_f1
+  artifact_equivalence_margin: 0.03
+  primary_comparisons:
+    - text_logistic_vs_publisher_only_on_controlled
+    - text_logistic_vs_length_only_on_controlled
+    - standard_vs_artifact_removed_equivalence
+  multiplicity_rule: Holm correction is required if primary-comparison p-values are added; current interval results are reported without binary significance labels.

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,31 +16,73 @@ from sklearn.svm import LinearSVC
 class BaselineSpec:
     name: str
     estimator: object
+    hyperparameters: dict[str, Any]
+    probability_scores: bool
 
 
-def baseline_specs() -> list[BaselineSpec]:
-    tfidf = TfidfVectorizer(max_features=20_000, ngram_range=(1, 2), min_df=2, strip_accents="unicode")
-    return [
-        BaselineSpec("majority", DummyClassifier(strategy="most_frequent")),
-        BaselineSpec(
-            "logistic_regression",
-            Pipeline(
-                [
-                    ("tfidf", tfidf),
-                    ("clf", LogisticRegression(max_iter=1000, class_weight="balanced")),
-                ]
-            ),
-        ),
-        BaselineSpec(
-            "linear_svm",
-            Pipeline(
-                [
-                    ("tfidf", TfidfVectorizer(max_features=20_000, ngram_range=(1, 2), min_df=2, strip_accents="unicode")),
-                    ("clf", LinearSVC(class_weight="balanced")),
-                ]
-            ),
-        ),
-    ]
+def _vectorizer(config: dict[str, Any]) -> TfidfVectorizer:
+    tfidf = config["models"]["tfidf"]
+    return TfidfVectorizer(
+        max_features=int(tfidf["max_features"]),
+        ngram_range=tuple(tfidf["ngram_range"]),
+        min_df=int(tfidf["min_df"]),
+        strip_accents="unicode",
+    )
+
+
+def baseline_candidates(config: dict[str, Any]) -> dict[str, list[BaselineSpec]]:
+    seed = int(config["random_seed"])
+    logistic = config["models"]["logistic_regression"]
+    svm = config["models"]["linear_svm"]
+    candidates: dict[str, list[BaselineSpec]] = {
+        "majority": [
+            BaselineSpec(
+                "majority",
+                DummyClassifier(strategy="most_frequent"),
+                {"strategy": "most_frequent"},
+                True,
+            )
+        ],
+        "logistic_regression": [],
+        "linear_svm": [],
+    }
+    for c_value in logistic["c_grid"]:
+        candidates["logistic_regression"].append(
+            BaselineSpec(
+                "logistic_regression",
+                Pipeline(
+                    [
+                        ("tfidf", _vectorizer(config)),
+                        (
+                            "clf",
+                            LogisticRegression(
+                                C=float(c_value),
+                                max_iter=int(logistic["max_iter"]),
+                                class_weight=logistic["class_weight"],
+                                random_state=seed,
+                            ),
+                        ),
+                    ]
+                ),
+                {"C": float(c_value), "max_iter": int(logistic["max_iter"])},
+                True,
+            )
+        )
+    for c_value in svm["c_grid"]:
+        candidates["linear_svm"].append(
+            BaselineSpec(
+                "linear_svm",
+                Pipeline(
+                    [
+                        ("tfidf", _vectorizer(config)),
+                        ("clf", LinearSVC(C=float(c_value), class_weight=svm["class_weight"])),
+                    ]
+                ),
+                {"C": float(c_value)},
+                False,
+            )
+        )
+    return candidates
 
 
 def fit_predict(spec: BaselineSpec, train_text, train_y, test_text) -> tuple[np.ndarray, np.ndarray]:
@@ -74,4 +116,3 @@ def top_features(model: object, limit: int = 50) -> pd.DataFrame:
         {"feature": names[i], "weight": float(weights[i]), "direction": "reliable"} for i in top_neg
     ]
     return pd.DataFrame(rows)
-

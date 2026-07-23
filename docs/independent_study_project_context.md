@@ -1511,9 +1511,8 @@ To make this project feel like an A+ project, emphasize:
 
 # 40. Working Log
 
-Ongoing session updates, working notes, and change tracking now live in [[independent_study_working_log]].
-
-Path: `docs/independent_study_working_log.md`
+Ongoing session updates, working notes, and change tracking are maintained in a
+local-only study log that is not published with the repository.
 
 ---
 
