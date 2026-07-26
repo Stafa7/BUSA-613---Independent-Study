@@ -18,6 +18,7 @@ from health_misinfo.config import load_paths
 from health_misinfo.evaluation.calibration import (
     calibration_metrics,
     choose_operating_thresholds,
+    decision_confidence,
     fit_calibrator,
     operating_point_result,
     reliability_table,
@@ -167,6 +168,10 @@ def _run_experiment(experiment_dir: Path) -> dict | None:
     pd.DataFrame([test_calibration]).to_csv(out / "test_calibration_metrics.csv", index=False)
     thresholds = choose_operating_thresholds(selection_binary, selection_probabilities)
     primary_decision_threshold = thresholds["macro_f1_validation_optimum"]
+    selection_confidence = decision_confidence(
+        selection_probabilities,
+        decision_threshold=primary_decision_threshold,
+    )
     calibrated_predictions = test.copy()
     calibrated_predictions["calibrated_probability_unreliable"] = test_probabilities
     calibrated_predictions["calibrated_prediction"] = np.where(
@@ -174,7 +179,14 @@ def _run_experiment(experiment_dir: Path) -> dict | None:
         "unreliable",
         "reliable",
     )
-    calibrated_predictions["confidence"] = np.maximum(test_probabilities, 1 - test_probabilities)
+    confidence = decision_confidence(
+        test_probabilities,
+        decision_threshold=primary_decision_threshold,
+    )
+    calibrated_predictions["decision_threshold"] = primary_decision_threshold
+    calibrated_predictions["decision_confidence"] = confidence
+    # Retain the original column name for downstream and historical consumers.
+    calibrated_predictions["confidence"] = confidence
     calibrated_predictions["calibrated_error"] = (
         calibrated_predictions["calibrated_prediction"]
         != calibrated_predictions["harmonized_label"]
@@ -184,8 +196,13 @@ def _run_experiment(experiment_dir: Path) -> dict | None:
     reliability.to_csv(out / "reliability_table.csv", index=False)
     _plot_reliability(reliability, out / "reliability_diagram.png")
 
-    confidence = np.maximum(test_probabilities, 1 - test_probabilities)
-    pd.DataFrame({"confidence": confidence}).to_csv(out / "confidence_values.csv", index=False)
+    pd.DataFrame(
+        {
+            "decision_threshold": primary_decision_threshold,
+            "decision_confidence": confidence,
+            "confidence": confidence,
+        }
+    ).to_csv(out / "confidence_values.csv", index=False)
     histogram, edges = np.histogram(confidence, bins=np.linspace(0.5, 1.0, 11))
     pd.DataFrame(
         {
@@ -202,10 +219,14 @@ def _run_experiment(experiment_dir: Path) -> dict | None:
         threshold = threshold_for_coverage(
             selection_probabilities,
             target_coverage,
+            decision_threshold=primary_decision_threshold,
         )
         fixed_rows.append(
             {
                 "target_validation_coverage": target_coverage,
+                "achieved_validation_coverage": float(
+                    (selection_confidence >= threshold).mean()
+                ),
                 "random_deferral_expected_risk": random_deferral_risk,
                 **selective_result(
                     test_binary,
@@ -219,10 +240,17 @@ def _run_experiment(experiment_dir: Path) -> dict | None:
 
     curve_rows = []
     for target_coverage in np.linspace(1.0, 0.1, 19):
-        threshold = threshold_for_coverage(selection_probabilities, float(target_coverage))
+        threshold = threshold_for_coverage(
+            selection_probabilities,
+            float(target_coverage),
+            decision_threshold=primary_decision_threshold,
+        )
         curve_rows.append(
             {
                 "target_validation_coverage": target_coverage,
+                "achieved_validation_coverage": float(
+                    (selection_confidence >= threshold).mean()
+                ),
                 "random_deferral_expected_risk": random_deferral_risk,
                 **selective_result(
                     test_binary,
@@ -246,7 +274,11 @@ def _run_experiment(experiment_dir: Path) -> dict | None:
             }
         )
     pd.DataFrame(operating_rows).to_csv(out / "operating_points.csv", index=False)
-    coverage_threshold = threshold_for_coverage(selection_probabilities, 0.8)
+    coverage_threshold = threshold_for_coverage(
+        selection_probabilities,
+        0.8,
+        decision_threshold=primary_decision_threshold,
+    )
     audit = calibrated_predictions.copy()
     audit["deferred_at_80pct_target"] = audit["confidence"] < coverage_threshold
     subgroup_rows = []
@@ -271,6 +303,10 @@ def _run_experiment(experiment_dir: Path) -> dict | None:
                 "method_selection_records": len(selection_indices),
                 "partition_method": partition_method,
                 "primary_decision_threshold": primary_decision_threshold,
+                "confidence_definition": (
+                    "threshold-relative distance normalized within predicted class; "
+                    "0.5 at the decision boundary and 1.0 at probability 0 or 1"
+                ),
                 "isotonic_eligible": "isotonic" in methods,
             },
             indent=2,

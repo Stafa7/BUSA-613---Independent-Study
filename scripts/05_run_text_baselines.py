@@ -30,6 +30,7 @@ from health_misinfo.paths import ensure_project_dirs
 SPLITS = {
     "standard": "standard_split_manifest.csv",
     "controlled": "controlled_split_manifest.csv",
+    "hosting_domain_sensitivity": "hosting_domain_disjoint_sensitivity_manifest.csv",
     "temporal": "temporal_split_manifest.csv",
     "masked": "artifact_masked_split_manifest.csv",
 }

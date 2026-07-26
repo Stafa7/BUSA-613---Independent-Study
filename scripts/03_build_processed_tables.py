@@ -63,14 +63,25 @@ def _normalize_publication_dates(frame: pd.DataFrame) -> pd.DataFrame:
     numeric = pd.to_numeric(raw, errors="coerce")
     normalized = pd.Series(pd.NaT, index=result.index, dtype="datetime64[ns, UTC]")
 
+    def nanosecond_safe(values: pd.Series) -> pd.Series:
+        """Discard parsed dates outside pandas' nanosecond timestamp range."""
+
+        years = values.dt.year
+        safe = values.where(years.between(1678, 2261))
+        return safe.astype("datetime64[ns, UTC]")
+
     seconds = numeric.between(100_000_000, 20_000_000_000, inclusive="both")
     milliseconds = numeric.between(100_000_000_000, 20_000_000_000_000, inclusive="both")
-    normalized.loc[seconds] = pd.to_datetime(numeric.loc[seconds], unit="s", errors="coerce", utc=True)
-    normalized.loc[milliseconds] = pd.to_datetime(
-        numeric.loc[milliseconds],
-        unit="ms",
-        errors="coerce",
-        utc=True,
+    normalized.loc[seconds] = nanosecond_safe(
+        pd.to_datetime(numeric.loc[seconds], unit="s", errors="coerce", utc=True)
+    )
+    normalized.loc[milliseconds] = nanosecond_safe(
+        pd.to_datetime(
+            numeric.loc[milliseconds],
+            unit="ms",
+            errors="coerce",
+            utc=True,
+        )
     )
     textual = ~(seconds | milliseconds) & raw.ne("")
     textual_values = raw.loc[textual].str.replace(r"\bat\b", "", regex=True)
@@ -88,11 +99,13 @@ def _normalize_publication_dates(frame: pd.DataFrame) -> pd.DataFrame:
             offset,
             regex=True,
         )
-    normalized.loc[textual] = pd.to_datetime(
-        textual_values,
-        format="mixed",
-        errors="coerce",
-        utc=True,
+    normalized.loc[textual] = nanosecond_safe(
+        pd.to_datetime(
+            textual_values,
+            format="mixed",
+            errors="coerce",
+            utc=True,
+        )
     )
     result["publication_date"] = normalized.dt.strftime("%Y-%m-%dT%H:%M:%SZ").fillna("")
     return result

@@ -8,11 +8,19 @@ split:
   train_size: 0.70
   validation_size: 0.15
   test_size: 0.15
-  min_records_per_class_for_controlled: 30
-  source_disjoint_repeats: 10
+  minimum_controlled_test_records: 100
+  minimum_controlled_test_records_per_class: 30
+  minimum_controlled_validation_records: 100
+  minimum_controlled_validation_records_per_class: 20
+  minimum_controlled_groups_per_class: 5
   maximum_controlled_prevalence_shift: 0.20
-  maximum_controlled_group_fraction: 0.80
-  minimum_effective_controlled_groups: 2.0
+  maximum_controlled_group_fraction: 0.35
+  minimum_effective_controlled_groups: 5.0
+  source_disjoint_attempts: 500
+  source_disjoint_repeat_attempts: 100
+  source_disjoint_repeats: 10
+  minimum_successful_source_disjoint_repeats: 5
+  hosting_domain_disjoint_attempts: 5000
 models:
   tfidf:
     max_features: 20000

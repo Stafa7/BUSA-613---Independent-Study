@@ -1,6 +1,11 @@
 import pandas as pd
 
-from health_misinfo.features.entities import assign_family_groups, assign_publisher_ids
+from health_misinfo.features.entities import (
+    assign_family_groups,
+    assign_publisher_ids,
+    normalize_publisher_name,
+    registrable_domain,
+)
 
 
 def _row(record_id, source_name, url, title, body):
@@ -27,6 +32,51 @@ def test_publisher_aliases_merge_without_transitive_domain_collapse():
     result = assign_publisher_ids(frame)
     assert result.loc[0, "publisher_id"] == result.loc[1, "publisher_id"]
     assert result.loc[0, "publisher_id"] != result.loc[2, "publisher_id"]
+
+
+def test_publisher_aliases_cover_dataset_spelling_and_url_forms():
+    assert normalize_publisher_name("AP Associated Press") == "ap"
+    assert normalize_publisher_name("The Associated Press") == "ap"
+    assert normalize_publisher_name("http://abcnews.go.com") == "abcnews"
+    assert normalize_publisher_name("https://www.cbsnews.com") == "cbsnews"
+    assert normalize_publisher_name("NIH National Institutes of Health") == "nih"
+    assert normalize_publisher_name("U.S. Food and Drug Administration") == "fda"
+    assert normalize_publisher_name("HTTP News") == "http news"
+
+
+def test_registrable_domain_accepts_homepages_and_resolves_archive_targets():
+    assert registrable_domain("https://www.example.com") == "example.com"
+    assert (
+        registrable_domain(
+            "https://web.archive.org/web/20200101000000/"
+            "https://news.example.co.uk/article"
+        )
+        == "example.co.uk"
+    )
+
+
+def test_fakehealth_credited_publishers_do_not_merge_through_shared_host():
+    frame = pd.DataFrame(
+        [
+            _row(
+                "a",
+                "Associated Press",
+                "https://www.cbsnews.com/a",
+                "First title here",
+                "body",
+            ),
+            _row(
+                "b",
+                "CBS News",
+                "https://www.cbsnews.com/b",
+                "Second title here",
+                "body",
+            ),
+        ]
+    )
+    result = assign_publisher_ids(frame)
+    assert result["source_domain"].nunique() == 1
+    assert result["publisher_id"].nunique() == 2
 
 
 def test_family_components_connect_across_different_identifiers():

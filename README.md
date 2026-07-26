@@ -6,7 +6,12 @@ This project examines whether natural-language-processing models for health-info
 
 The study uses **CoAID** as its primary dataset and **FakeHealth** as its secondary validation and robustness dataset.
 
-> **Project status:** The validity-overhaul rerun is complete for the traditional study: substantive primary cohorts, canonical publishers, connected duplicate families, unit-by-label standard splits, a valid FakeHealth canonical-publisher-disjoint design with ten repetitions, a CoAID temporal family-disjoint fallback, diagnostic controls, paired artifact and rating sensitivity, separated calibration, cross-dataset transfer, engagement ablation, and a blinded error-audit instrument. The pinned three-model transformer comparison is implemented but stopped because the declared Python 3.11 transformer environment is not provisioned locally.
+> **Project status:** The validity-overhaul code and frozen review protocols are
+> implemented, but the current local outputs predate those changes and are not
+> final study evidence. No final result should be inferred until the archival
+> rerun is completed. The pinned transformer comparison and optional narrative
+> stack are configured but have not been executed in the declared Python 3.11
+> environment.
 
 ---
 
@@ -564,14 +569,15 @@ following precedence:
 - [x] Bidirectional cross-dataset transfer diagnostics completed after source-domain overlap filtering.
 - [x] FakeHealth matched complete-case text, engagement, and combined ablations completed.
 - [x] Artifact-feature and text-unit subgroup audit outputs generated locally.
-- [x] Globally deduplicated, blinded two-reviewer error-audit instrument generated locally.
+- [x] Frozen, deterministic single-reviewer error-audit workflow implemented.
 - [x] DistilBERT, ModernBERT, and BiomedBERT checkpoints pinned in configuration.
 - [x] Transformer execution now returns a nonzero status and machine-readable failure record when incomplete.
 
 ### Next
 
 - [ ] Provision the locked Python 3.11 environment and suitable accelerator, then rerun `scripts/06_run_transformer.py`.
-- [ ] Conduct the required qualitative high-confidence-error and deferred-case audit.
+- [ ] After the archival rerun, complete the staged single-reviewer qualitative
+  audit using [`docs/manual_review_guide.md`](docs/manual_review_guide.md).
 
 ### Later
 
@@ -586,12 +592,22 @@ following precedence:
 
 The executable first-half analysis pipeline is implemented as Python package code plus phase scripts. Notebooks may be used for review, but the reproducible source of truth is the script pipeline.
 
-The strict runtime is Python `3.11.15`, recorded in `.python-version`. The exact resolved dependency graph is committed in `uv.lock`; a hash-checked pip export is committed in `requirements.lock.txt`.
+The strict runtime is Python `3.11.15`, recorded in `.python-version`. The exact
+resolved dependency graph is committed in `uv.lock`; hash-checked pip exports
+are committed in `requirements.lock.txt` for the core study and
+`requirements-narratives.lock.txt` for the optional narrative-analysis stack.
 
 Preferred strict setup:
 
 ```bash
 uv sync --frozen
+```
+
+Narrative discovery is optional and has its heavier BERTopic stack isolated in
+the `narratives` dependency group:
+
+```bash
+uv sync --frozen --extra narratives
 ```
 
 Pip-only fallback:
@@ -603,9 +619,15 @@ python -m pip install --require-hashes -r requirements.lock.txt
 python -m pip install -e .
 ```
 
-`requirements.txt` pins only the direct project dependencies for readability. Use `uv.lock` or `requirements.lock.txt` for strict reproduction.
+For a pip-only environment that will run narrative discovery, replace
+`requirements.lock.txt` above with `requirements-narratives.lock.txt`.
 
-Run the first-half pipeline after activating the environment:
+`requirements.txt` pins only the direct project dependencies for readability.
+Use `uv.lock` or the matching core/narrative hash-locked export for strict
+reproduction.
+
+Run the unattended computational prerequisites after activating the
+environment:
 
 ```bash
 python scripts/01_inventory.py
@@ -615,14 +637,22 @@ python scripts/04_make_splits.py
 python scripts/05_run_text_baselines.py
 python scripts/06_run_transformer.py
 python scripts/07_run_calibration_selective.py
-python scripts/08_prepare_error_audit.py
-python scripts/09_summarize_study.py
 python scripts/10_run_cross_dataset_transfer.py
 python scripts/11_run_engagement_ablation.py
 python -m pytest -q
 ```
 
-Current local execution status:
+Do not generate the final audit roster before transfer and narrative outputs are
+settled. The optional narrative and staged single-reviewer phases are
+deliberately not a single unattended command. Follow
+[`docs/manual_review_guide.md`](docs/manual_review_guide.md), beginning with:
+
+```bash
+.venv/bin/python scripts/13_run_narrative_discovery.py
+```
+
+Archived pre-overhaul execution status (not valid evidence for the current
+branch):
 
 - Phase 1 inventory completed.
 - Phase 2 provenance and label outputs completed.
@@ -632,14 +662,14 @@ Current local execution status:
 - Phase 6 returned status 2 and a machine-readable stop record because the locked transformer stack is unavailable in the active environment.
 - Calibration and selective-prediction outputs were generated for 20 calibratable baseline experiments.
 - Eight bidirectional transfer diagnostics and six FakeHealth engagement ablations were completed locally.
-- A 433-case globally unique blinded instrument was generated for required human qualitative coding; it is not yet a completed error audit.
-- Test suite passes: 26 tests.
+- A 433-case two-reviewer instrument was generated, but it is superseded by the
+  frozen single-reviewer protocol and should not be reviewed.
 
-The authoritative linear rerun used Python 3.12.11, pandas 2.2.3, and
+These artifacts predate the current preprocessing, split, transfer, and review
+protocol changes. The old run used Python 3.12.11, pandas 2.2.3, and
 scikit-learn 1.6.1. The declared archive environment is Python 3.11.15 and must
-be provisioned before the final archival rerun. The active environment is also
-missing the transformer stack; no transformer result should be inferred from
-the compute-stop record.
+be provisioned before a final archival rerun. Until then, do not infer a current
+transformer result or review the old qualitative instrument.
 
 Generated outputs are intentionally ignored by Git. The committed repository contains code, configs, tests, and documentation; it does not contain raw data, processed tables, model outputs, or predictions.
 

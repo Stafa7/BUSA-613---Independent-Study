@@ -1,12 +1,123 @@
-from pathlib import Path
+from dataclasses import fields, replace
 
 import pandas as pd
 import pytest
 
-from health_misinfo.config import PROJECT_ROOT
+from health_misinfo.config import PROJECT_ROOT, load_experiments
+from health_misinfo.splits import (
+    SplitSettings,
+    grouped_stratified_split,
+    hosting_domain_disjoint_split_or_unavailable,
+)
 
 
 SPLITS = PROJECT_ROOT / "outputs" / "splits"
+
+
+def _synthetic_split_frame(domain_count: int = 24) -> pd.DataFrame:
+    rows = []
+    for domain_index in range(domain_count):
+        for label in ("reliable", "unreliable"):
+            record_id = f"record_{domain_index}_{label}"
+            rows.append(
+                {
+                    "dataset": "fakehealth",
+                    "record_id": record_id,
+                    "harmonized_label": label,
+                    "text_unit": "story",
+                    "analysis_cohort": "fakehealth_story",
+                    "source_name": "Shared credited publisher",
+                    "publisher_id": "publisher_shared",
+                    "source_domain": f"host{domain_index}.example",
+                    "publication_date": f"2020-01-{domain_index + 1:02d}",
+                    "duplicate_group": f"duplicate_{record_id}",
+                    "family_group": f"family_{record_id}",
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def _small_split_settings(**overrides) -> SplitSettings:
+    settings = SplitSettings(
+        minimum_controlled_test_records=2,
+        minimum_controlled_test_records_per_class=1,
+        minimum_controlled_validation_records=2,
+        minimum_controlled_validation_records_per_class=1,
+        minimum_controlled_groups_per_class=5,
+        maximum_controlled_group_fraction=0.50,
+        minimum_effective_controlled_groups=1.0,
+        maximum_controlled_prevalence_shift=0.01,
+        source_disjoint_attempts=50,
+        source_disjoint_repeat_attempts=20,
+        hosting_domain_disjoint_attempts=50,
+    )
+    return replace(settings, **overrides)
+
+
+def test_all_declared_split_settings_are_loaded_from_experiment_config():
+    split_config = load_experiments()["split"]
+    configured_fields = {field.name for field in fields(SplitSettings)}
+    assert configured_fields == set(split_config)
+    settings = SplitSettings.from_mapping(split_config)
+    assert settings.maximum_controlled_group_fraction == 0.35
+    assert settings.minimum_effective_controlled_groups == 5.0
+
+
+def test_unknown_split_configuration_is_rejected_instead_of_ignored():
+    with pytest.raises(ValueError, match="Unknown split configuration keys"):
+        SplitSettings.from_mapping({"unwired_gate": 123})
+
+
+def test_standard_split_uses_configured_target_sizes():
+    frame = _synthetic_split_frame()
+    settings = _small_split_settings(
+        train_size=0.50,
+        validation_size=0.25,
+        test_size=0.25,
+    )
+    manifest = grouped_stratified_split(frame, seed=613, settings=settings)
+    fractions = manifest["split"].value_counts(normalize=True)
+    assert fractions.to_dict() == {
+        "train": 0.50,
+        "validation": 0.25,
+        "test": 0.25,
+    }
+
+
+def test_hosting_domain_sensitivity_is_domain_disjoint_and_separately_named():
+    frame = _synthetic_split_frame()
+    settings = _small_split_settings(
+        train_size=0.50,
+        validation_size=0.30,
+        test_size=0.20,
+    )
+    manifest, decision = hosting_domain_disjoint_split_or_unavailable(
+        frame,
+        seed=613,
+        settings=settings,
+    )
+    assert manifest is not None
+    assert decision.status == "hosting_domain_disjoint_sensitivity_passed"
+    assert manifest["split_type"].eq("hosting_domain_disjoint_sensitivity").all()
+    assert manifest["group_field"].eq("source_domain").all()
+    assert manifest.groupby("source_domain")["split"].nunique().max() == 1
+    assert manifest.groupby("family_group")["split"].nunique().max() == 1
+    assert manifest.groupby("publisher_id")["split"].nunique().max() > 1
+    fractions = manifest["split"].value_counts(normalize=True)
+    assert fractions["train"] == 0.50
+    assert fractions["validation"] == pytest.approx(7 / 24)
+    assert fractions["test"] == pytest.approx(5 / 24)
+
+
+def test_configured_concentration_gate_can_reject_domain_assignment():
+    frame = _synthetic_split_frame()
+    manifest, decision = hosting_domain_disjoint_split_or_unavailable(
+        frame,
+        seed=613,
+        settings=_small_split_settings(maximum_controlled_group_fraction=0.20),
+    )
+    assert manifest is None
+    assert decision.status.endswith("failed_no_valid_assignment")
 
 
 @pytest.mark.skipif(not (SPLITS / "standard_split_manifest.csv").exists(), reason="split manifests not generated yet")

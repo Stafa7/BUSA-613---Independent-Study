@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import json
 import platform
 import sys
@@ -22,12 +23,28 @@ from health_misinfo.paths import ensure_project_dirs
 SPLITS = {
     "standard": ("standard_split_manifest.csv", "model_text"),
     "controlled": ("controlled_split_manifest.csv", "model_text"),
+    "hosting_domain_sensitivity": (
+        "hosting_domain_disjoint_sensitivity_manifest.csv",
+        "model_text",
+    ),
     "masked": ("artifact_masked_split_manifest.csv", "model_text_masked"),
 }
 
 
-def _write_stop_note(out: Path, reason: str) -> None:
+def _write_stop_note(
+    out: Path,
+    reason: str,
+    *,
+    gate: str,
+    details: dict[str, object] | None = None,
+) -> None:
     out.mkdir(parents=True, exist_ok=True)
+    details = details or {}
+    detail_lines = "\n".join(
+        f"- {key.replace('_', ' ').title()}: {value}" for key, value in details.items()
+    )
+    if detail_lines:
+        detail_lines = f"\n## Gate details\n\n{detail_lines}\n"
     note = f"""# Transformer compute stop note
 
 Generated: {datetime.now().isoformat(timespec="seconds")}
@@ -41,6 +58,7 @@ Generated: {datetime.now().isoformat(timespec="seconds")}
 ## Stop reason
 
 {reason}
+{detail_lines}
 
 ## Study implication
 
@@ -52,8 +70,10 @@ reported until this script completes on the frozen corrected manifests.
     (out / "status.json").write_text(
         json.dumps(
             {
-                "status": "failed",
+                "status": "stopped",
+                "gate": gate,
                 "reason": reason,
+                "details": details,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
             },
             indent=2,
@@ -63,7 +83,68 @@ reported until this script completes on the frozen corrected manifests.
     )
 
 
-def main() -> int:
+def _planned_experiment_count(
+    paths: dict[str, Path],
+    model_specs: list[dict[str, object]],
+    seeds: list[int],
+) -> tuple[int, list[dict[str, object]]]:
+    """Count requested model/split/dataset/seed runs without loading model weights."""
+
+    manifest_plan: list[dict[str, object]] = []
+    dataset_split_count = 0
+    for split_name, (manifest_file, _) in SPLITS.items():
+        manifest_path = paths["splits"] / manifest_file
+        datasets: list[str] = []
+        if manifest_path.exists():
+            manifest = pd.read_csv(manifest_path, usecols=["dataset"])
+            datasets = sorted(manifest["dataset"].dropna().astype(str).unique().tolist())
+        dataset_split_count += len(datasets)
+        manifest_plan.append(
+            {
+                "split": split_name,
+                "manifest": manifest_file,
+                "datasets": datasets,
+            }
+        )
+    return len(model_specs) * len(seeds) * dataset_split_count, manifest_plan
+
+
+def _accelerator_status(torch_module) -> dict[str, object]:
+    """Return a small, serializable accelerator capability record."""
+
+    cuda_available = bool(torch_module.cuda.is_available())
+    mps_backend = getattr(torch_module.backends, "mps", None)
+    mps_available = bool(mps_backend and mps_backend.is_available())
+    mps_built = bool(mps_backend and mps_backend.is_built())
+    if cuda_available:
+        backend = "cuda"
+    elif mps_available:
+        backend = "mps"
+    else:
+        backend = "cpu"
+    return {
+        "backend": backend,
+        "cuda_available": cuda_available,
+        "cuda_device_count": int(torch_module.cuda.device_count()) if cuda_available else 0,
+        "mps_available": mps_available,
+        "mps_built": mps_built,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Run the pinned transformer comparison on the frozen manifests."
+    )
+    parser.add_argument(
+        "--allow-cpu",
+        action="store_true",
+        help=(
+            "Explicitly permit the full transformer grid without CUDA or MPS. "
+            "This can be very slow and is disabled by default."
+        ),
+    )
+    args = parser.parse_args(argv)
+
     ensure_project_dirs()
     paths = load_paths()
     config = load_experiments()
@@ -80,6 +161,7 @@ def main() -> int:
     stop_out = run_root / "compute_stop"
     try:
         import numpy as np
+        import torch
         from datasets import Dataset
         from sklearn.metrics import f1_score
         from transformers import (
@@ -90,13 +172,47 @@ def main() -> int:
             TrainingArguments,
         )
     except Exception as exc:
-        _write_stop_note(stop_out, f"Required transformer dependency is unavailable: `{type(exc).__name__}: {exc}`.")
+        _write_stop_note(
+            stop_out,
+            f"Required transformer dependency is unavailable: `{type(exc).__name__}: {exc}`.",
+            gate="dependency_import",
+            details={"python": platform.python_version()},
+        )
         print(f"Wrote transformer compute stop note to {stop_out}")
         return 2
 
     training = config["models"]["transformer_training"]
     model_specs = config["models"]["transformers"]
     seeds = [int(seed) for seed in training["seeds"]]
+    planned_experiments, manifest_plan = _planned_experiment_count(
+        paths,
+        model_specs,
+        seeds,
+    )
+    accelerator = _accelerator_status(torch)
+    if accelerator["backend"] == "cpu" and not args.allow_cpu:
+        _write_stop_note(
+            stop_out,
+            (
+                "No CUDA or Apple MPS accelerator is available. The full pinned "
+                "transformer grid is intentionally blocked on CPU; rerun in a suitable "
+                "accelerated environment, or pass `--allow-cpu` to accept the cost."
+            ),
+            gate="accelerator_required",
+            details={
+                **accelerator,
+                "planned_experiments": planned_experiments,
+                "expected_experiments": planned_experiments,
+                "completed_experiments": 0,
+                "models": len(model_specs),
+                "seeds": len(seeds),
+                "manifest_plan": manifest_plan,
+                "cpu_override_used": False,
+            },
+        )
+        print(f"Wrote transformer compute stop note to {stop_out}")
+        return 3
+
     epochs = int(training["epochs"])
     batch_size = int(training["batch_size"])
     learning_rate = float(training["learning_rate"])
@@ -362,6 +478,11 @@ def main() -> int:
             _write_stop_note(
                 failure_out,
                 f"{experiment_name} failed: `{type(exc).__name__}: {exc}`.",
+                gate="model_execution",
+                details={
+                    "experiment_name": experiment_name,
+                    "accelerator": accelerator,
+                },
             )
             print(f"Wrote transformer failure status to {failure_out}")
 
