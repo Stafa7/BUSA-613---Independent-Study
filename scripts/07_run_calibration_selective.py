@@ -26,6 +26,14 @@ from health_misinfo.evaluation.calibration import (
     threshold_for_coverage,
 )
 
+SPLITS = {
+    "standard": "standard_split_manifest.csv",
+    "controlled": "controlled_split_manifest.csv",
+    "hosting_domain_sensitivity": "hosting_domain_disjoint_sensitivity_manifest.csv",
+    "temporal": "temporal_split_manifest.csv",
+    "masked": "artifact_masked_split_manifest.csv",
+}
+
 
 def _plot_reliability(table: pd.DataFrame, path: Path) -> None:
     plotted = table.dropna(subset=["mean_probability", "observed_unreliable_rate"])
@@ -85,6 +93,41 @@ def _calibration_partitions(
     return fit_indices, selection_indices, "record_stratified_fallback"
 
 
+def _restore_validation_group(
+    validation: pd.DataFrame,
+    config: dict,
+) -> pd.DataFrame:
+    group_field = str(config["group_field"])
+    if group_field in validation.columns:
+        return validation
+
+    split_name = str(config["split_name"])
+    manifest_name = SPLITS.get(split_name)
+    if manifest_name is None:
+        raise KeyError(
+            f"Validation predictions lack {group_field!r}, and split {split_name!r} "
+            "has no configured manifest"
+        )
+    manifest_path = load_paths()["splits"] / manifest_name
+    manifest = pd.read_csv(
+        manifest_path,
+        usecols=["record_id", group_field],
+    ).drop_duplicates("record_id")
+    restored = validation.merge(
+        manifest,
+        on="record_id",
+        how="left",
+        validate="one_to_one",
+    )
+    if restored[group_field].isna().any():
+        missing = int(restored[group_field].isna().sum())
+        raise ValueError(
+            f"Could not restore {group_field!r} for {missing} validation records "
+            f"from {manifest_path}"
+        )
+    return restored
+
+
 def _run_experiment(experiment_dir: Path) -> dict | None:
     config_path = experiment_dir / "config.yaml"
     validation_path = experiment_dir / "validation_predictions.csv"
@@ -95,7 +138,7 @@ def _run_experiment(experiment_dir: Path) -> dict | None:
     if config.get("model") not in {"logistic_regression", "linear_svm"}:
         return None
 
-    validation = pd.read_csv(validation_path)
+    validation = _restore_validation_group(pd.read_csv(validation_path), config)
     test = pd.read_csv(test_path)
     validation_binary = validation["harmonized_label"].eq("unreliable").astype(int).to_numpy()
     test_binary = test["harmonized_label"].eq("unreliable").astype(int).to_numpy()

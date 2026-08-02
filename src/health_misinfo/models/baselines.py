@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import product
 from typing import Any
 
 import numpy as np
@@ -20,12 +21,39 @@ class BaselineSpec:
     probability_scores: bool
 
 
-def _vectorizer(config: dict[str, Any]) -> TfidfVectorizer:
+def tfidf_parameter_grid(config: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return the frozen representation grid in deterministic tie-break order."""
+
     tfidf = config["models"]["tfidf"]
+    max_features = tfidf.get("max_features_grid", [tfidf["max_features"]])
+    minimum_document_frequencies = tfidf.get("min_df_grid", [tfidf["min_df"]])
+    sublinear_values = tfidf.get("sublinear_tf_grid", [tfidf.get("sublinear_tf", False)])
+    ngram_range = tuple(int(value) for value in tfidf["ngram_range"])
+    return [
+        {
+            "tfidf_max_features": int(features),
+            "tfidf_ngram_min": int(ngram_range[0]),
+            "tfidf_ngram_max": int(ngram_range[1]),
+            "tfidf_min_df": int(minimum_frequency),
+            "tfidf_sublinear_tf": bool(sublinear),
+        }
+        for features, minimum_frequency, sublinear in product(
+            max_features,
+            minimum_document_frequencies,
+            sublinear_values,
+        )
+    ]
+
+
+def _vectorizer(parameters: dict[str, Any]) -> TfidfVectorizer:
     return TfidfVectorizer(
-        max_features=int(tfidf["max_features"]),
-        ngram_range=tuple(tfidf["ngram_range"]),
-        min_df=int(tfidf["min_df"]),
+        max_features=int(parameters["tfidf_max_features"]),
+        ngram_range=(
+            int(parameters["tfidf_ngram_min"]),
+            int(parameters["tfidf_ngram_max"]),
+        ),
+        min_df=int(parameters["tfidf_min_df"]),
+        sublinear_tf=bool(parameters["tfidf_sublinear_tf"]),
         strip_accents="unicode",
     )
 
@@ -46,42 +74,56 @@ def baseline_candidates(config: dict[str, Any]) -> dict[str, list[BaselineSpec]]
         "logistic_regression": [],
         "linear_svm": [],
     }
-    for c_value in logistic["c_grid"]:
-        candidates["logistic_regression"].append(
-            BaselineSpec(
-                "logistic_regression",
-                Pipeline(
-                    [
-                        ("tfidf", _vectorizer(config)),
-                        (
-                            "clf",
-                            LogisticRegression(
-                                C=float(c_value),
-                                max_iter=int(logistic["max_iter"]),
-                                class_weight=logistic["class_weight"],
-                                random_state=seed,
+    representation_grid = tfidf_parameter_grid(config)
+    for representation in representation_grid:
+        for c_value in logistic["c_grid"]:
+            hyperparameters = {
+                **representation,
+                "C": float(c_value),
+                "max_iter": int(logistic["max_iter"]),
+            }
+            candidates["logistic_regression"].append(
+                BaselineSpec(
+                    "logistic_regression",
+                    Pipeline(
+                        [
+                            ("tfidf", _vectorizer(representation)),
+                            (
+                                "clf",
+                                LogisticRegression(
+                                    C=float(c_value),
+                                    max_iter=int(logistic["max_iter"]),
+                                    class_weight=logistic["class_weight"],
+                                    random_state=seed,
+                                ),
                             ),
-                        ),
-                    ]
-                ),
-                {"C": float(c_value), "max_iter": int(logistic["max_iter"])},
-                True,
+                        ]
+                    ),
+                    hyperparameters,
+                    True,
+                )
             )
-        )
-    for c_value in svm["c_grid"]:
-        candidates["linear_svm"].append(
-            BaselineSpec(
-                "linear_svm",
-                Pipeline(
-                    [
-                        ("tfidf", _vectorizer(config)),
-                        ("clf", LinearSVC(C=float(c_value), class_weight=svm["class_weight"])),
-                    ]
-                ),
-                {"C": float(c_value)},
-                False,
+    for representation in representation_grid:
+        for c_value in svm["c_grid"]:
+            candidates["linear_svm"].append(
+                BaselineSpec(
+                    "linear_svm",
+                    Pipeline(
+                        [
+                            ("tfidf", _vectorizer(representation)),
+                            (
+                                "clf",
+                                LinearSVC(
+                                    C=float(c_value),
+                                    class_weight=svm["class_weight"],
+                                ),
+                            ),
+                        ]
+                    ),
+                    {**representation, "C": float(c_value)},
+                    False,
+                )
             )
-        )
     return candidates
 
 

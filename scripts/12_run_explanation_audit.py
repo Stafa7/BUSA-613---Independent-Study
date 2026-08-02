@@ -43,16 +43,17 @@ def _write_status(out: Path, status: str, **details: object) -> None:
 
 
 def _selected_estimator(config: dict, model_name: str, run_config: dict):
-    selected_c = float(run_config["selected_hyperparameters"]["C"])
+    selected_hyperparameters = run_config["selected_hyperparameters"]
     candidates = baseline_candidates(config)[model_name]
     matching = [
         candidate
         for candidate in candidates
-        if float(candidate.hyperparameters["C"]) == selected_c
+        if candidate.hyperparameters == selected_hyperparameters
     ]
     if len(matching) != 1:
         raise ValueError(
-            f"Could not uniquely reconstruct {model_name} with C={selected_c}"
+            f"Could not uniquely reconstruct {model_name} with "
+            f"hyperparameters={selected_hyperparameters}"
         )
     return clone(matching[0].estimator)
 

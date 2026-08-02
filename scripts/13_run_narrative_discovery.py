@@ -7,6 +7,7 @@ import json
 import platform
 import random
 import sys
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -235,9 +236,17 @@ def main() -> int:
                 ~dataset_frame["record_id"].isin(fit_frame["record_id"])
             ].copy()
             if len(non_fit_frame):
-                non_fit_topics, non_fit_probabilities = topic_model.transform(
-                    non_fit_frame["model_text"].fillna("").astype(str).tolist()
-                )
+                # HDBSCAN's full out-of-sample membership matrix can fail for
+                # otherwise valid condensed trees. We only consume the assigned
+                # topic strength here, so use BERTopic's approximate-prediction
+                # path and retain full probabilities for the fitted documents.
+                topic_model.calculate_probabilities = False
+                try:
+                    non_fit_topics, non_fit_probabilities = topic_model.transform(
+                        non_fit_frame["model_text"].fillna("").astype(str).tolist()
+                    )
+                finally:
+                    topic_model.calculate_probabilities = True
                 non_fit_assignments = non_fit_frame[
                     ["dataset", "record_id", "harmonized_label"]
                 ].copy()
@@ -310,6 +319,7 @@ def main() -> int:
                 {
                     "dataset": str(dataset),
                     "error": f"{type(exc).__name__}: {exc}",
+                    "traceback": traceback.format_exc(),
                 }
             )
 

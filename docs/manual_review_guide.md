@@ -7,25 +7,21 @@ truth.
 
 ## Before reviewing anything
 
-Do not review the artifacts from the current `latest_run.json`. It points to run
-`20260723T221313Z_33100ceb_b83d97b4`, which predates the revised preprocessing,
-splits, calibration, sampling, and review protocol and is stale.
-
-The files named below do **not** exist in their final form until a future rerun.
-After that rerun, open:
+Always resolve the review location from:
 
 `outputs/experiments/latest_run.json`
 
 Treat its `run_path` value as `RUN_ROOT` throughout this guide. Confirm that its
-`run_id` is newer than the stale run above before opening any review sheet. Never
-copy judgments from an older run into the new sheets.
+`run_id` is not the stale pre-overhaul run
+`20260723T221313Z_33100ceb_b83d97b4` before opening any review sheet. Never copy
+judgments from an older run into the current sheets.
 
 The future error-audit roster is frozen deterministically with seed `613` and a
 maximum of 80 unique cases. Do not add, remove, reorder, substitute, or
 hand-select cases after seeing their content. The audit is a purposive,
 stratified diagnostic sample—not an estimate of error prevalence.
 
-For a complete original-scope handoff, the future order is:
+For a complete original-scope handoff, the order is:
 
 1. Complete the baseline, calibration, and bidirectional-transfer computation.
 2. Run `.venv/bin/python scripts/13_run_narrative_discovery.py`, perform the
