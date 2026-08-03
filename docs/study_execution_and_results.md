@@ -272,8 +272,10 @@ The unattended archival computation completed on August 2, 2026 under run
 and diagnostic experiments, 63 final transformer runs, six transformer-tuning
 trials, 22 calibration/selective-prediction analyses, eight transfer
 experiments, six engagement ablations, two narrative-discovery fits, and all
-declared paired summaries. The qualitative stages remain open because they
-require actual human judgments.
+declared paired summaries. The single-reviewer narrative validation is complete.
+The separate two-stage qualitative error audit is also complete for all 80
+frozen cases, including blinded Stage A, post-freeze explanation generation,
+revealed Stage B confirmation, and finalization.
 
 ### Compute and tuning audit
 
@@ -438,12 +440,53 @@ articles yield no candidate topic meeting the 30-document minimum. FakeHealth's
 brain/Alzheimer/diet, women's symptoms/depression/menopause, and heart/pain/
 surgery. These phrases are machine summaries, not validated narratives.
 
-The narrative finalizer records `awaiting_human_validation`, enumerates every
-missing review field, and confirms that it created no human labels. The user
-must review at least five representatives per FakeHealth topic and complete the
-four topic decisions. Error-roster generation, label/prediction-blinded Stage
-A, explanation generation, Stage B, and qualitative finalization remain
-intentionally unrun so the declared ordering and blinding are preserved.
+The reviewer completed all 40 representative-document decisions and all four
+topic decisions. The finalizer retains three reviewer-controlled candidate
+narratives and rejects the 138-record brain/diet/aging topic as mixed rather
+than treating mathematical proximity as practical narrative coherence.
+
+| Retained narrative | Topic records | Supporting representatives | Share of 720 unreliable records |
+|---|---:|---:|---:|
+| Claims of advances in cancer detection and treatment | 173 | 9/10 | 24.0% |
+| Claims about women's reproductive and menopause treatments | 83 | 8/10 | 11.5% |
+| Claims of emerging cardiac procedures, devices, and regenerative treatments | 65 | 8/10 | 9.0% |
+
+Together, the retained candidates contain 321 of 720 unreliable-labelled
+FakeHealth records (44.6%). This is corpus prevalence under dataset-defined
+labels, not public or internet prevalence and not independent medical
+fact-checking. All 12 narrative-specific performance groups pass their minimum
+record/class gates, and all nine engagement-profile groups pass the metadata
+completeness gate. No frozen emotion features are available, so the emotion
+comparison remains explicitly unavailable rather than inferred.
+
+The deterministic qualitative error roster fills all nine sampling quotas,
+yielding 80 globally deduplicated cases with no shortfall. Stage A was completed
+and frozen before any explanation output was generated. Of the 80 excerpts, 48
+(60.0%) were coded as containing a health-relevant signal, 20 (25.0%) as
+unclear, and 12 (15.0%) as not containing one. Stance was coded as endorsement
+for 26 cases, discussion for 18, debunking or mixed for four, unclear for 31,
+and not applicable for one.
+
+All eight Logistic Regression and Linear SVM refits reproduce the frozen
+predictions exactly. The maximum decision-score difference is below `1e-5`,
+and the audit contains 12,386 signed local feature contributions.
+Standard-versus-controlled top-feature overlap is only moderate for CoAID and
+low for FakeHealth on the small held-out comparison subset, so individual
+feature lists are treated as descriptive evidence rather than stable or causal
+explanations.
+
+Stage B used generated case-specific proposals followed by explicit human
+confirmation. All 80 proposals were approved and none were overridden; this
+assisted workflow is recorded in the submission manifest and limits claims of
+independent reviewer authorship. Twenty-eight sampled anchors were coded
+`no_model_error`. Among the 52 sampled errors, the leading codes were
+`topic_shortcut` (16; 30.8% of errors),
+`medical_terminology_misunderstanding` (15; 28.8%), `label_ambiguity` (7;
+13.5%), and `source_or_publisher_artifact` (4; 7.7%). The remaining ten errors
+were distributed across stance, context, text-unit, temporal, framing, and
+unexplained-residual categories. Because the roster deliberately oversamples
+errors and special cases, these fractions describe the audit sample, not
+population prevalence.
 
 ## Validity and functional value
 
@@ -462,7 +505,11 @@ metadata, only three neural seeds, and one human reviewer. Going forward, the
 pipeline is functionally useful as a reproducible model-audit and human-triage
 research framework. Deployment claims would require independent contemporary
 data, medical-domain annotation, external multi-reviewer validation, monitoring
-for drift, and a defined escalation policy.
+for drift, and a defined escalation policy. The Stage B codes were generated as
+proposals and approved by the reviewer without overrides, so future work should
+also repeat the audit with independently authored labels from multiple
+reviewers rather than treating the present assisted confirmation as an
+agreement study.
 
 ## Interpretation rules
 

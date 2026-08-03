@@ -116,6 +116,7 @@ def baseline_candidates(config: dict[str, Any]) -> dict[str, list[BaselineSpec]]
                                 LinearSVC(
                                     C=float(c_value),
                                     class_weight=svm["class_weight"],
+                                    random_state=seed,
                                 ),
                             ),
                         ]

@@ -9,8 +9,9 @@ The study uses **CoAID** as its primary dataset and **FakeHealth** as its second
 > **Project status:** The archival computational rerun is complete in the locked
 > Python 3.11 environment, including validation-only hyperparameter tuning, 63
 > CUDA/MPS-aware transformer runs, calibration, transfer, engagement, and
-> candidate-narrative discovery. The narrative and staged qualitative audits
-> remain open at their required human-review gates. See the
+> candidate-narrative discovery. Narrative validation, the staged 80-case
+> qualitative audit, local explanations, and final paired summaries are also
+> complete. See the
 > [study execution and results record](docs/study_execution_and_results.md).
 
 ---
@@ -580,20 +581,22 @@ following precedence:
 - [x] All 63 final transformer runs completed across three architectures, three seeds, and the declared robustness splits on Apple MPS.
 - [x] Standard-versus-artifact-masked paired equivalence analysis completed with the frozen ±0.03 margin.
 - [x] Calibration/selective prediction, bidirectional transfer, and matched engagement ablation rerun on the archival cohort.
-- [x] Candidate narrative discovery completed; CoAID produced no size-eligible candidate and FakeHealth produced four awaiting human validation.
+- [x] Candidate narrative discovery completed; CoAID produced no size-eligible candidate and FakeHealth produced four human-reviewed candidates.
+- [x] Narrative validation finalized with three retained FakeHealth narratives and one mathematically clustered but practically mixed topic rejected.
+- [x] Frozen 80-case qualitative error-audit roster generated with every prespecified sampling quota filled and no shortfall.
+- [x] Blinded Error Stage A completed and frozen before explanation generation.
+- [x] Eight sparse linear refits verified with 100% frozen-prediction agreement; local explanations generated for all 80 cases.
+- [x] Revealed Error Stage B completed through generated proposals and explicit human confirmation; all 80 cases finalized.
+- [x] Paired study summaries regenerated and the final results record reconciled against the completed qualitative outputs.
 
 ### Next
 
-- [ ] Review at least five representatives for each of the four FakeHealth
-  candidate topics and complete the topic-decision sheet.
-- [ ] Finalize retained narratives, then generate the frozen qualitative error roster.
-- [ ] Complete blinded Error Stage A before generating or opening explanation artifacts.
-- [ ] Complete Error Stage B and run the qualitative finalizer using
+- [x] Complete the ordered human-review workflow in
   [`docs/manual_review_guide.md`](docs/manual_review_guide.md).
 
 ### Later
 
-- [ ] Produce the final report and recommendations.
+- [x] Produce the final report and recommendations.
 
 ---
 
@@ -685,7 +688,9 @@ Current archival execution status:
 - Phase 5 produced 78 traditional-model, diagnostic-control, and sensitivity experiments with complete validation-tuning ledgers.
 - Phase 6 completed six validation-only tuning trials and 63 final transformer runs on verified Apple MPS with zero failures or missing artifacts.
 - Calibration/selective prediction completed for 22 eligible sparse-text experiments; transfer produced eight experiments and two shift bundles; engagement produced six matched ablations.
-- Candidate discovery produced no size-eligible CoAID topic and four FakeHealth machine candidates. The human finalizer correctly reports `awaiting_human_validation` and created no human labels.
+- Candidate discovery produced no size-eligible CoAID topic and four FakeHealth machine candidates. Human validation retained three coherent FakeHealth narratives and rejected one mixed cluster.
+- The frozen 80-case error audit completed in the required order. Stage A was reviewer-authored; Stage B used case-specific generated proposals followed by explicit human approval on every case, with that assisted workflow retained in the audit manifest.
+- The explanation audit verified all eight sparse linear refits with 100% frozen-prediction agreement and generated 12,386 signed local feature contributions.
 
 Generated results are local and keyed by `outputs/experiments/latest_run.json`.
 Use the [study execution and results record](docs/study_execution_and_results.md)
