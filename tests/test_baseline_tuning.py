@@ -46,5 +46,9 @@ def test_each_linear_model_searches_representation_and_regularization():
 
     assert len(candidates["logistic_regression"]) == 24
     assert len(candidates["linear_svm"]) == 24
+    assert all(
+        candidate.estimator.named_steps["clf"].random_state == 613
+        for candidate in candidates["linear_svm"]
+    )
     assert candidates["logistic_regression"][0].hyperparameters["C"] == 0.1
     assert candidates["logistic_regression"][-1].hyperparameters["C"] == 10.0

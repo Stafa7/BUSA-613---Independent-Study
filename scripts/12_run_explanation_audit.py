@@ -27,6 +27,7 @@ MANIFESTS = {
     "controlled": "controlled_split_manifest.csv",
 }
 MODELS = ("logistic_regression", "linear_svm")
+REFIT_SCORE_ATOL = 1e-5
 
 
 def _write_status(out: Path, status: str, **details: object) -> None:
@@ -167,7 +168,7 @@ def main() -> int:
                 )
                 verified = (
                     prediction_agreement == 1.0
-                    and maximum_score_difference <= 1e-8
+                    and maximum_score_difference <= REFIT_SCORE_ATOL
                 )
                 verification_rows.append(
                     {
@@ -291,6 +292,10 @@ def main() -> int:
         local_explanation_rows=len(contribution_frame),
         stability_records=len(stability),
         contribution_definition="signed TF-IDF value multiplied by the unreliable-oriented linear coefficient",
+        refit_verification=(
+            "All frozen predictions must agree. Decision scores may differ by at most "
+            f"{REFIT_SCORE_ATOL:g} to allow floating-point variation in linear solvers."
+        ),
         stability_interpretation=(
             "Descriptive same-record comparison only; no single local explanation "
             "is treated as stable or causal evidence."
