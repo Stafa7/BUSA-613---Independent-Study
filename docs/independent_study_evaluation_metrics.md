@@ -1,12 +1,10 @@
 # Independent Study Evaluation Metrics
 
-Related context note: [[independent_study_project_context]]
-
-Use this note to keep the model-evaluation criteria separate from the broader project context.
+Related context: [Independent study project context](independent_study_project_context.md)
 
 ## Core evaluation metrics
 
-Use:
+The evaluation includes:
 
 - accuracy,
 - precision,
@@ -20,7 +18,7 @@ Use:
 
 ## Metric emphasis
 
-Because misinformation detection has asymmetric risks, the report should discuss:
+Because misinformation detection has asymmetric risks, the interpretation emphasizes:
 
 - recall for misinformation,
 - precision for misinformation,
@@ -28,6 +26,5 @@ Because misinformation detection has asymmetric risks, the report should discuss
 - false negatives where misinformation is missed,
 - trade-offs between aggressive flagging and over-censorship.
 
-## Related reporting sections
-
-- Result table templates remain in [[independent_study_project_context]] under the later results-planning section.
+Detailed metrics and findings are reported in the
+[study execution and results record](study_execution_and_results.md).

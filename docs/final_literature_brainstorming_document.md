@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document summarizes the current literature review as a brainstorming aid for re-evaluating the independent study design. It focuses on what the reviewed articles collectively say about datasets, data provenance, methodologies, findings, and successful research patterns.
+This document summarizes the literature review that informed the independent study design. It focuses on what the reviewed articles collectively say about datasets, data provenance, methodologies, findings, and successful research patterns.
 
-The key takeaway is that this project should not be treated as only a binary fake-versus-real classification task. The stronger framing is an applied analytics pipeline for health misinformation: detect questionable health information, explain model decisions, identify recurring narratives, evaluate engagement behavior, and test whether models generalize across datasets and health topics.
+The literature supports framing the project as an applied health-misinformation analytics pipeline rather than only a binary fake-versus-real classification task. The pipeline detects questionable health information, explains model decisions, identifies recurring narratives, evaluates engagement behavior, and tests whether models generalize across datasets and health topics.
 
 ## Article Set Reviewed
 

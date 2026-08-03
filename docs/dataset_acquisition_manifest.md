@@ -3,7 +3,7 @@
 Acquisition date: 2026-06-25  
 Storage location: `data/raw/`
 
-This manifest records the official dataset repositories downloaded for the independent study. The repository contents are preserved unchanged. Subsequent cleaning and transformation must be written outside these directories.
+This manifest records the official dataset repositories downloaded for the independent study. The repository contents are preserved unchanged, and subsequent cleaning and transformations operate outside these directories.
 
 ## CoAID
 

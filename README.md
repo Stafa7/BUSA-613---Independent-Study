@@ -20,13 +20,13 @@ The study uses **CoAID** as its primary dataset and **FakeHealth** as its second
 
 - [Research purpose](#research-purpose)
 - [Research contribution](#research-contribution)
-- [Locked research questions](#locked-research-questions)
+- [Research questions](#research-questions)
 - [Datasets](#datasets)
 - [Dataset terminology and limitations](#dataset-terminology-and-limitations)
 - [Repository structure](#repository-structure)
 - [Research workflow](#research-workflow)
 - [Study quality audit](#study-quality-audit)
-- [Planned models and analyses](#planned-models-and-analyses)
+- [Models and analyses](#models-and-analyses)
 - [Evaluation framework](#evaluation-framework)
 - [Reproducibility rules](#reproducibility-rules)
 - [Documentation guide](#documentation-guide)
@@ -79,7 +79,7 @@ Negative findings remain meaningful. Poor transfer, inconsistent engagement bene
 
 ---
 
-## Locked research questions
+## Research questions
 
 1. **How do traditional machine-learning and transformer-based models compare when classifying dataset-defined unreliable health information under standard and artifact-controlled within-dataset evaluation?**
 
@@ -90,8 +90,6 @@ Negative findings remain meaningful. Poor transfer, inconsistent engagement bene
 4. **What recurring narratives characterize dataset-defined unreliable health information, and—where metadata permit—how do model performance, engagement, and emotional profiles vary across those narratives?**
 
 5. **Can confidence calibration, selective prediction, and explanation-based auditing identify cases in which automated classifications should not be trusted?**
-
-Changes to these questions require a documented rationale in the local study protocol.
 
 ---
 
@@ -179,8 +177,6 @@ CoAID and FakeHealth are complementary rather than equivalent:
 - Their different topics, source structures, text units, and labeling processes make them useful for testing robustness.
 - Those same differences make direct transfer difficult and require explicit compatibility checks before cross-dataset results can be interpreted.
 
-No third dataset is required for the core study. Additional datasets may be considered only after all required analyses are complete.
-
 ---
 
 ## Dataset terminology and limitations
@@ -196,7 +192,7 @@ This wording is deliberate:
 - a source-level label should not be represented as a claim-level fact check;
 - harmonized labels used in this study are analytical mappings, not new ground-truth annotations.
 
-The study will preserve each dataset's native labels and document every transformation used to create a common analytical target.
+The study preserves each dataset's native labels and documents every transformation used to create a common analytical target.
 
 Poor cross-dataset performance may reflect:
 
@@ -208,7 +204,7 @@ Poor cross-dataset performance may reflect:
 - class-prevalence differences;
 - model limitations.
 
-These explanations must be investigated rather than attributing all degradation to the model.
+The interpretation considers these explanations rather than attributing all degradation to the model.
 
 ---
 
@@ -240,14 +236,14 @@ Current top-level structure:
 | Path | Purpose |
 |---|---|
 | `data/raw/` | Immutable copies of source datasets |
-| `docs/` | Research plans, logs, manifests, and synthesized documentation |
+| `docs/` | Manifests, audit records, methodological guides, and study documentation |
 | `docs/literature_pdfs/` | Original literature PDFs used in the review |
 | `docs/literature_mds/` | Machine-readable conversions of literature PDFs |
 | `docs/literature_review/` | Clean per-paper analytical notes and synthesis |
 | `scripts/` | Reproducible project scripts, including dataset acquisition |
 | `Approval and Application/` | Local administrative course forms, ignored by Git |
 
-The raw dataset directories retain their upstream Git metadata so the exact downloaded revisions can be verified. They should not be edited directly.
+The raw dataset directories retain their upstream Git metadata so the exact downloaded revisions can be verified. Project transformations operate on separate derived copies.
 
 Raw data is intentionally excluded from Git. The canonical acquisition command is:
 
@@ -255,7 +251,7 @@ Raw data is intentionally excluded from Git. The canonical acquisition command i
 python scripts/download_datasets.py --all --extract
 ```
 
-Use the script as the source of truth for where datasets come from. Notebooks may be added later for exploration, but dataset acquisition and preprocessing should live in `.py` files so the workflow is reproducible from a clean clone.
+The script is the source of truth for dataset provenance. Dataset acquisition and preprocessing are implemented in `.py` files so the workflow is reproducible from a clean clone.
 
 Processed data and generated results are produced locally and ignored by Git.
 The strict Python environment specification is tracked in `.python-version`,
@@ -266,9 +262,7 @@ The strict Python environment specification is tracked in `.python-version`,
 
 ## Research workflow
 
-The authoritative protocol and its decision log are maintained locally.
-
-The study proceeds through the following stages:
+The completed study followed these stages:
 
 1. **Protocol and workspace setup**
    - Freeze research questions.
@@ -319,17 +313,15 @@ The study proceeds through the following stages:
 13. **Synthesis and reporting**
     - Answer every research question and translate findings into practical recommendations.
 
-Each stage has prerequisites, required artifacts, decision gates, and an objective definition of done in the local study protocol.
-
 ## Study quality audit
 
-A local-only study-quality audit distinguishes repaired pipeline defects from remaining scientific limits. The current repository now enforces substantive-text filtering, deterministic exact-deduplication, parent-family split protection, honest controlled-split naming, validation-based baseline tuning, group-aware uncertainty, and experiment metadata. Remaining limits are stated in the current-status section and local study records.
+The study-quality audit distinguishes repaired pipeline defects from remaining scientific limits. The repository enforces substantive-text filtering, deterministic exact-deduplication, parent-family split protection, honest controlled-split naming, validation-based baseline tuning, group-aware uncertainty, and experiment metadata. Remaining limits are stated in the current-status section and study records.
 
-## Planned models and analyses
+## Models and analyses
 
-### Required models
+### Model set
 
-| Role | Planned method |
+| Role | Method |
 |---|---|
 | Sanity-check baseline | Majority-class prediction |
 | Primary traditional baseline | Word/bigram TF-IDF with Logistic Regression |
@@ -340,11 +332,9 @@ A local-only study-quality audit distinguishes repaired pipeline defects from re
 | Engagement-only model | Logistic Regression on structured engagement features |
 | Combined model | Text-model scores plus standardized engagement features |
 
-Additional models are optional and may not replace the required comparisons.
-
 ### Artifact controls
 
-The evaluation will compare a standard stratified split against the strongest feasible controlled design:
+The evaluation compares a standard stratified split against the strongest feasible controlled design:
 
 1. canonical-publisher-disjoint split;
 2. topic-held-out split;
@@ -370,7 +360,7 @@ Potential features include:
 - temporal rates and burstiness;
 - aggregate user or network indicators when already available and ethically usable.
 
-Engagement modeling is conditional. It proceeds only if coverage and per-class sample-size requirements in the local study protocol are met. The project will not purchase API access merely to force this analysis.
+Engagement modeling is conditional on coverage and per-class sample size. The study uses available metadata and does not depend on purchased API access.
 
 FakeHealth passes the coverage gate and its matched complete-case ablation has
 been run. Engagement-ID counts alone underperform text, and adding them to text
@@ -379,9 +369,9 @@ because engagement availability differs substantially by label.
 
 ### Narrative analysis
 
-BERTopic is the planned topic-modeling method. Computational topics will be treated as candidate narratives only after representative documents are reviewed manually.
+BERTopic is the topic-modeling method. Computational topics are treated as candidate narratives only after manual review of representative documents.
 
-A topic must not be interpreted as support for misinformation merely because it contains misinformation-related words. Documents may quote, discuss, reject, or debunk the same narrative.
+A topic is not interpreted as support for misinformation merely because it contains misinformation-related words. Documents may quote, discuss, reject, or debunk the same narrative.
 
 ### Explainability and error analysis
 
@@ -404,7 +394,7 @@ Attention weights alone will not be treated as explanations.
 
 The primary aggregate metric is **macro F1**.
 
-Every required classifier will also report:
+Each classifier reports:
 
 - precision, recall, and F1 for each class;
 - PR-AUC for the dataset-defined unreliable class;
@@ -416,7 +406,7 @@ The dataset-defined unreliable class is treated as the positive class.
 
 ### Statistical uncertainty
 
-Key metrics and paired model differences will use:
+Key metrics and paired model differences use:
 
 - 1,000 paired bootstrap resamples;
 - 95% percentile confidence intervals;
@@ -426,7 +416,7 @@ A small numerical increase will not automatically be described as a meaningful i
 
 ### Calibration
 
-Confidence quality will be evaluated using:
+Confidence quality is evaluated using:
 
 - Brier score;
 - expected calibration error;
@@ -438,9 +428,9 @@ The validation set is divided into calibration-fitting and method/threshold-sele
 
 ### Selective prediction
 
-The project will test whether models can safely defer uncertain cases for human review.
+Selective-prediction tests examine whether models can defer uncertain cases for human review.
 
-Reported outputs will include:
+Reported outputs include:
 
 - coverage;
 - selective risk;
@@ -450,17 +440,17 @@ Reported outputs will include:
 
 ### Operating thresholds
 
-The study will compare:
+The study compares:
 
 1. the default classification threshold;
 2. a recall-oriented threshold intended to miss fewer unreliable items;
 3. a precision-oriented threshold intended to reduce false flags against reliable material.
 
-No universal threshold will be recommended without considering the operational context.
+No universal threshold is recommended without considering the operational context.
 
 ### Subgroup evaluation
 
-Where sample sizes permit, performance will be reported by:
+Where sample sizes permit, performance is reported by:
 
 - dataset;
 - source;
@@ -469,13 +459,13 @@ Where sample sizes permit, performance will be reported by:
 - engagement availability;
 - standard versus artifact-controlled setting.
 
-Small subgroups will be described without unsupported inferential claims.
+Small subgroups are described without unsupported inferential claims.
 
 ---
 
 ## Reproducibility rules
 
-Every experiment must record:
+Experiment records include:
 
 - dataset revision and processed-data version;
 - unit of analysis;
@@ -490,9 +480,9 @@ Every experiment must record:
 - predictions and confidence scores;
 - runtime environment.
 
-The fixed project seed is `613`. Transformer experiments should use seeds `613`, `614`, and `615` when computationally feasible.
+The fixed project seed is `613`. Transformer experiments use seeds `613`, `614`, and `615`.
 
-All learned transformations must be fit using training and validation data only. This includes:
+All learned transformations are fit using training and validation data only. This includes:
 
 - vocabulary construction;
 - imputation;
@@ -501,9 +491,9 @@ All learned transformations must be fit using training and validation data only.
 - probability calibration;
 - confidence and decision thresholds.
 
-The test labels must not be used to choose preprocessing, models, topic configurations, calibration methods, or thresholds.
+Test labels are excluded from choices about preprocessing, models, topic configurations, calibration methods, and thresholds.
 
-Raw data under `data/raw/` must remain unchanged. Derived files should eventually be stored under `data/interim/` or `data/processed/`, with scripts that reproduce them.
+Raw data under `data/raw/` remain unchanged. Derived files are stored under `data/interim/` or `data/processed/` and are generated by reproducible scripts.
 
 ---
 
@@ -664,16 +654,7 @@ python -c "import torch; print(torch.backends.mps.is_available(), torch.mps.devi
 Sandboxed processes may not be able to see the Metal device even when it is
 available to the same environment from a normal terminal.
 
-Do not generate the final audit roster before transfer and narrative outputs are
-settled. The optional narrative and staged single-reviewer phases are
-deliberately not a single unattended command. Follow
-[`docs/manual_review_guide.md`](docs/manual_review_guide.md), beginning with:
-
-```bash
-.venv/bin/python scripts/13_run_narrative_discovery.py
-```
-
-Current archival execution status:
+Completed execution:
 
 - Phase 3 parsed 8,271 records and retained 5,192 primary records: 3,055 CoAID articles and 2,137 FakeHealth items.
 - Phase 4 produced family-safe standard splits, a FakeHealth canonical-publisher-disjoint split with ten valid repetitions, and temporal family-disjoint manifests. CoAID correctly falls back to temporal evaluation because no publisher-disjoint allocation passes the frozen gates.
@@ -685,9 +666,8 @@ Current archival execution status:
 - The explanation audit verified all eight sparse linear refits with 100% frozen-prediction agreement and generated 12,386 signed local feature contributions.
 
 Generated results are local and keyed by `outputs/experiments/latest_run.json`.
-Use the [study execution and results record](docs/study_execution_and_results.md)
-for current findings and limitations; do not review superseded instruments from
-older run directories.
+The [study execution and results record](docs/study_execution_and_results.md)
+presents the current findings and limitations.
 
 Generated outputs are intentionally ignored by Git. The committed repository contains code, configs, tests, and documentation; it does not contain raw data, processed tables, model outputs, or predictions.
 
@@ -697,17 +677,16 @@ Generated outputs are intentionally ignored by Git. The committed repository con
 
 This project analyzes publicly released research datasets. It does not collect new private health information and does not attempt to identify or profile individual users.
 
-Required boundaries:
+The study applies these boundaries:
 
-- Do not characterize dataset labels as unquestionable medical truth.
-- Do not expose unnecessary user identifiers in reports or public artifacts.
-- Do not use raw social-media identifiers as examples when paraphrased or anonymized cases are sufficient.
-- Do not claim that model explanations establish causality or medical reasoning.
-- Do not present model outputs as clinical advice.
-- Do not recommend automated removal or censorship solely from classifier output.
-- Treat uncertain, ambiguous, and high-risk cases as candidates for qualified human review.
-- Report false-positive risks against reliable health information.
-- Report false-negative risks where unreliable information is missed.
+- Dataset labels are not characterized as unquestionable medical truth.
+- Reports and public artifacts exclude unnecessary user identifiers.
+- Examples use paraphrased or anonymized cases instead of raw social-media identifiers.
+- Model explanations are not evidence of causality or medical reasoning.
+- Model outputs are not presented as clinical advice.
+- Classifier output alone does not support automated removal or censorship.
+- Uncertain, ambiguous, and high-risk cases are candidates for qualified human review.
+- Reporting covers both false-positive and false-negative risks.
 
 The practical target is decision support and triage, not autonomous adjudication.
 
@@ -717,10 +696,10 @@ The practical target is decision support and triage, not autonomous adjudication
 
 ### Raw data
 
-- Keep original source files under `data/raw/`.
-- Do not edit upstream files in place.
-- Record source revisions and checksums.
-- Do not commit derived files inside the upstream dataset repositories.
+- Original source files remain under `data/raw/`.
+- Upstream files are preserved unchanged.
+- Source revisions and checksums are recorded.
+- Derived files remain outside the upstream dataset repositories.
 
 ### Derived data
 
@@ -731,20 +710,13 @@ Derived data are separated into:
 - `outputs/` for predictions, model artifacts, explanations, and topic models;
 - `reports/` for final figures and tables.
 
-Every derived artifact should have a reproducible generating script or notebook.
+Derived artifacts have reproducible generating scripts or notebooks.
 
 ### Large and sensitive artifacts
 
-Before publishing this project to a remote Git host:
-
-- review dataset redistribution terms;
-- avoid committing large model checkpoints;
-- avoid committing credentials, API keys, or local environment files;
-- decide whether raw datasets should be ignored, attached as releases, managed with Git LFS, or reproduced through acquisition scripts;
-- remove OS and application artifacts such as `.DS_Store` and `.Rhistory`;
-- review nested `.git` directories under `data/raw/`.
-
-No repository-wide software or content license has yet been declared. Dataset and article licenses remain governed by their respective sources.
+Raw datasets, model checkpoints, credentials, local environment files, and OS
+artifacts are excluded from Git. Dataset and article licenses remain governed
+by their respective sources.
 
 ---
 
