@@ -6,12 +6,12 @@ This project examines whether natural-language-processing models for health-info
 
 The study uses **CoAID** as its primary dataset and **FakeHealth** as its secondary validation and robustness dataset.
 
-> **Project status:** The validity-overhaul code and frozen review protocols are
-> implemented, but the current local outputs predate those changes and are not
-> final study evidence. No final result should be inferred until the archival
-> rerun is completed. The pinned transformer comparison and optional narrative
-> stack are configured but have not been executed in the declared Python 3.11
-> environment.
+> **Project status:** The archival computational rerun is complete in the locked
+> Python 3.11 environment, including validation-only hyperparameter tuning, 63
+> CUDA/MPS-aware transformer runs, calibration, transfer, engagement, and
+> candidate-narrative discovery. The narrative and staged qualitative audits
+> remain open at their required human-review gates. See the
+> [study execution and results record](docs/study_execution_and_results.md).
 
 ---
 
@@ -516,6 +516,9 @@ Raw data under `data/raw/` must remain unchanged. Derived files should eventuall
 | [Literature brainstorming](docs/final_literature_brainstorming_document.md) | Dataset, method, contribution, and scope implications drawn from the reviewed literature |
 | [Evaluation metrics](docs/independent_study_evaluation_metrics.md) | Compact record of the original model-evaluation criteria |
 | [Dataset manifest](docs/dataset_acquisition_manifest.md) | Official sources, revisions, checksums, file counts, and acquisition decisions |
+| [Study execution and results](docs/study_execution_and_results.md) | Detailed data attrition, pipeline logic, experiment rationale, computational findings, and validity limits |
+| [Hyperparameter protocol](docs/hyperparameter_tuning_protocol.md) | Frozen validation-only search spaces and model-selection rules |
+| [Manual review guide](docs/manual_review_guide.md) | Ordered narrative and qualitative-review gates that require human judgment |
 | `docs/literature_review/` | Per-paper analytical review notes |
 | `docs/literature_mds/` | Converted source text for local searching and reference |
 | `docs/literature_pdfs/` | Original article PDFs |
@@ -572,18 +575,24 @@ following precedence:
 - [x] Frozen, deterministic single-reviewer error-audit workflow implemented.
 - [x] DistilBERT, ModernBERT, and BiomedBERT checkpoints pinned in configuration.
 - [x] Transformer execution now returns a nonzero status and machine-readable failure record when incomplete.
+- [x] CUDA/MPS acceleration auto-detection and Trainer-device verification implemented.
+- [x] Traditional-model and shared transformer hyperparameter searches frozen and completed using validation data only.
+- [x] All 63 final transformer runs completed across three architectures, three seeds, and the declared robustness splits on Apple MPS.
+- [x] Standard-versus-artifact-masked paired equivalence analysis completed with the frozen ±0.03 margin.
+- [x] Calibration/selective prediction, bidirectional transfer, and matched engagement ablation rerun on the archival cohort.
+- [x] Candidate narrative discovery completed; CoAID produced no size-eligible candidate and FakeHealth produced four awaiting human validation.
 
 ### Next
 
-- [ ] Provision the locked Python 3.11 environment and suitable accelerator, then rerun `scripts/06_run_transformer.py`.
-- [ ] After the archival rerun, complete the staged single-reviewer qualitative
-  audit using [`docs/manual_review_guide.md`](docs/manual_review_guide.md).
+- [ ] Review at least five representatives for each of the four FakeHealth
+  candidate topics and complete the topic-decision sheet.
+- [ ] Finalize retained narratives, then generate the frozen qualitative error roster.
+- [ ] Complete blinded Error Stage A before generating or opening explanation artifacts.
+- [ ] Complete Error Stage B and run the qualitative finalizer using
+  [`docs/manual_review_guide.md`](docs/manual_review_guide.md).
 
 ### Later
 
-- [ ] Fine-tune DistilBERT, ModernBERT, and BiomedBERT at a common 512-token context.
-- [ ] Conduct validated narrative analysis.
-- [ ] Complete explanation and error audits.
 - [ ] Produce the final report and recommendations.
 
 ---
@@ -639,8 +648,26 @@ python scripts/06_run_transformer.py
 python scripts/07_run_calibration_selective.py
 python scripts/10_run_cross_dataset_transfer.py
 python scripts/11_run_engagement_ablation.py
+python scripts/09_summarize_study.py
 python -m pytest -q
 ```
+
+Transformer execution reads `accelerator_preference` from
+`configs/experiments.yaml` and selects the first available backend in the
+declared order (`cuda`, then `mps`). CPU execution remains disabled unless
+`--allow-cpu` is passed explicitly. Before training, the script verifies that
+Hugging Face Trainer resolved the same backend and records the detected
+capabilities and actual device in each run configuration.
+
+On Apple silicon, verify MPS from the same execution context that will launch
+training:
+
+```bash
+python -c "import torch; print(torch.backends.mps.is_available(), torch.mps.device_count())"
+```
+
+Sandboxed processes may not be able to see the Metal device even when it is
+available to the same environment from a normal terminal.
 
 Do not generate the final audit roster before transfer and narrative outputs are
 settled. The optional narrative and staged single-reviewer phases are
@@ -651,25 +678,19 @@ deliberately not a single unattended command. Follow
 .venv/bin/python scripts/13_run_narrative_discovery.py
 ```
 
-Archived pre-overhaul execution status (not valid evidence for the current
-branch):
+Current archival execution status:
 
-- Phase 1 inventory completed.
-- Phase 2 provenance and label outputs completed.
 - Phase 3 parsed 8,271 records and retained 5,192 primary records: 3,055 CoAID articles and 2,137 FakeHealth items.
 - Phase 4 produced family-safe standard splits, a FakeHealth canonical-publisher-disjoint split with ten valid repetitions, and temporal family-disjoint manifests. CoAID correctly falls back to temporal evaluation because no publisher-disjoint allocation passes the frozen gates.
-- Phase 5 produced 70 versioned traditional-model and sensitivity experiments plus FakeHealth repeated-split summaries.
-- Phase 6 returned status 2 and a machine-readable stop record because the locked transformer stack is unavailable in the active environment.
-- Calibration and selective-prediction outputs were generated for 20 calibratable baseline experiments.
-- Eight bidirectional transfer diagnostics and six FakeHealth engagement ablations were completed locally.
-- A 433-case two-reviewer instrument was generated, but it is superseded by the
-  frozen single-reviewer protocol and should not be reviewed.
+- Phase 5 produced 78 traditional-model, diagnostic-control, and sensitivity experiments with complete validation-tuning ledgers.
+- Phase 6 completed six validation-only tuning trials and 63 final transformer runs on verified Apple MPS with zero failures or missing artifacts.
+- Calibration/selective prediction completed for 22 eligible sparse-text experiments; transfer produced eight experiments and two shift bundles; engagement produced six matched ablations.
+- Candidate discovery produced no size-eligible CoAID topic and four FakeHealth machine candidates. The human finalizer correctly reports `awaiting_human_validation` and created no human labels.
 
-These artifacts predate the current preprocessing, split, transfer, and review
-protocol changes. The old run used Python 3.12.11, pandas 2.2.3, and
-scikit-learn 1.6.1. The declared archive environment is Python 3.11.15 and must
-be provisioned before a final archival rerun. Until then, do not infer a current
-transformer result or review the old qualitative instrument.
+Generated results are local and keyed by `outputs/experiments/latest_run.json`.
+Use the [study execution and results record](docs/study_execution_and_results.md)
+for current findings and limitations; do not review superseded instruments from
+older run directories.
 
 Generated outputs are intentionally ignored by Git. The committed repository contains code, configs, tests, and documentation; it does not contain raw data, processed tables, model outputs, or predictions.
 

@@ -196,6 +196,7 @@ def test_finalizer_rejects_substituted_representative_record():
 @pytest.mark.parametrize("invalid_topic_id", ["", "not_a_topic", 0.5])
 def test_finalizer_gates_malformed_human_topic_ids(invalid_topic_id):
     topic_review = _completed_topic_review()
+    topic_review["topic_id"] = topic_review["topic_id"].astype("object")
     topic_review.loc[0, "topic_id"] = invalid_topic_id
 
     result = finalize_human_narratives(

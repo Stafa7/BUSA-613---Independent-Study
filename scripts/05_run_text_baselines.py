@@ -152,14 +152,18 @@ def _run_one(
         raise ValueError(f"{dataset}/{split_name}/{model_name} lacks both classes in a required split")
 
     validation_rows = []
+    candidate_evaluations = Parallel(
+        n_jobs=min(4, len(specs)),
+        prefer="processes",
+    )(
+        delayed(_fit_and_score)(spec, train, validation, text_col)
+        for spec in specs
+    )
     fitted = []
-    for candidate_index, spec in enumerate(specs):
-        validation_prediction, validation_score, validation_metrics = _fit_and_score(
-            spec,
-            train,
-            validation,
-            text_col,
-        )
+    for candidate_index, (spec, evaluation) in enumerate(
+        zip(specs, candidate_evaluations, strict=True)
+    ):
+        validation_prediction, validation_score, validation_metrics = evaluation
         validation_rows.append(
             {
                 "candidate_index": candidate_index,
@@ -212,6 +216,8 @@ def _run_one(
     predictions.to_csv(out / "predictions.csv", index=False)
 
     validation_predictions = validation[prediction_columns].copy()
+    if group_field not in validation_predictions.columns:
+        validation_predictions[group_field] = validation[group_field].astype(str).to_numpy()
     validation_predictions["prediction"] = validation_prediction
     validation_predictions["score_unreliable"] = validation_score
     validation_predictions["analysis_cohort"] = dataset
