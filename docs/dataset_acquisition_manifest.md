@@ -23,7 +23,7 @@ Observed CSV records, excluding headers:
 
 | Record type | Count |
 |---|---:|
-| Reliable news | 4,533 |
+| Reliable news | 4,532 |
 | Unreliable news | 925 |
 | Reliable claims | 490 |
 | Unreliable claims | 28 |

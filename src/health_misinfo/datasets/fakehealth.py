@@ -7,7 +7,15 @@ import pandas as pd
 
 from health_misinfo.datasets.labels import fakehealth_harmonized_label
 from health_misinfo.features.engagement import optional_user_network_available
-from health_misinfo.features.text import clean_text, domain_from_url, join_text, mask_artifacts, normalized_text_hash, stable_id
+from health_misinfo.features.text import (
+    clean_text,
+    content_exclusion_reason,
+    domain_from_url,
+    join_text,
+    mask_artifacts,
+    normalized_text_hash,
+    stable_id,
+)
 
 
 DATASET_PARTS = {
@@ -49,14 +57,17 @@ def load_fakehealth_items(raw_dir: Path, raw_root: Path) -> pd.DataFrame:
             url = clean_text(content.get("url")) or clean_text(review.get("source_link"))
             source_name = clean_text(review.get("news_source")) or clean_text(content.get("source")) or domain_from_url(url)
             engagement = engagements.get(news_id, {})
-            tweet_count = len(engagement.get("tweets", []) or [])
-            reply_count = len(engagement.get("replies", []) or [])
-            retweet_count = len(engagement.get("retweets", []) or [])
+            tweet_count = len({str(value) for value in (engagement.get("tweets", []) or [])})
+            reply_count = len({str(value) for value in (engagement.get("replies", []) or [])})
+            retweet_count = len({str(value) for value in (engagement.get("retweets", []) or [])})
+            exclusion_reason = content_exclusion_reason(model_text)
             rows.append(
                 {
                     "dataset": "fakehealth",
                     "record_id": stable_id("fakehealth", part, news_id, prefix="fh"),
                     "source_record_id": f"{part}:{news_id}",
+                    "source_file": f"dataset/reviews/{part}.json",
+                    "parse_status": "parsed" if content else "content_file_missing",
                     "text_unit": text_unit,
                     "title": title,
                     "body_text": body,
@@ -67,17 +78,20 @@ def load_fakehealth_items(raw_dir: Path, raw_root: Path) -> pd.DataFrame:
                     "label_source": "FakeHealth HealthNewsReview expert rating mapped to binary reliability",
                     "source_name": source_name,
                     "url": url,
+                    "alternate_urls": "[]",
                     "publish_date": clean_text(content.get("publish_date")),
                     "collection_date": "",
+                    "content_file_available": bool(content),
                     "engagement_available": tweet_count > 0 or reply_count > 0 or retweet_count > 0,
                     "tweet_count": tweet_count,
                     "reply_count": reply_count,
                     "retweet_count": retweet_count,
-                    "follower_file_available": bool(followers_available),
-                    "following_file_available": bool(following_available),
+                    "network_followers_archive_available": bool(followers_available),
+                    "network_following_archive_available": bool(following_available),
+                    "record_network_linkage_available": False,
                     "duplicate_group": normalized_text_hash(model_text),
-                    "exclusion_reason": "" if model_text else "missing_model_text",
+                    "family_group": "",
+                    "exclusion_reason": exclusion_reason or ("missing_model_text" if not model_text else ""),
                 }
             )
     return pd.DataFrame(rows)
-

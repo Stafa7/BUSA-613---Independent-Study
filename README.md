@@ -6,7 +6,7 @@ This project examines whether natural-language-processing models for health-info
 
 The study uses **CoAID** as its primary dataset and **FakeHealth** as its secondary validation and robustness dataset.
 
-> **Project status:** Research design, dataset acquisition, provenance documentation, profiling, label harmonization, leakage auditing, strict environment locking, and first-half text-baseline implementation are complete. Later-stage transformer, engagement, transfer, calibration, narrative, explanation, and final reporting analyses remain gated or incomplete.
+> **Project status:** The validity-overhaul rerun is complete for the traditional study: substantive primary cohorts, canonical publishers, connected duplicate families, unit-by-label standard splits, a valid FakeHealth canonical-publisher-disjoint design with ten repetitions, a CoAID temporal family-disjoint fallback, diagnostic controls, paired artifact and rating sensitivity, separated calibration, cross-dataset transfer, engagement ablation, and a blinded error-audit instrument. The pinned three-model transformer comparison is implemented but stopped because the declared Python 3.11 transformer environment is not provisioned locally.
 
 ---
 
@@ -85,7 +85,7 @@ Negative findings remain meaningful. Poor transfer, inconsistent engagement bene
 
 5. **Can confidence calibration, selective prediction, and explanation-based auditing identify cases in which automated classifications should not be trusted?**
 
-Changes to these questions require a documented rationale and approval in the execution plan's decision log.
+Changes to these questions require a documented rationale in the local study protocol.
 
 ---
 
@@ -110,14 +110,16 @@ Observed raw CSV records, before parsing and deduplication:
 
 | Record type | Count |
 |---|---:|
-| Reliable news | 4,533 |
+| Reliable news | 4,532 |
 | Unreliable news | 925 |
 | Reliable claims | 490 |
 | Unreliable claims | 28 |
 | Post-ID links | 160,875 |
 | Reply-ID links | 135,877 |
 
-These counts are acquisition-level observations, not final analytical sample sizes. Final counts will change after schema validation, duplicate removal, missing-text checks, label review, and unit-of-analysis selection.
+These are acquisition-level observations. The validity-overhaul primary cohort
+contains 3,055 substantive CoAID articles; claims remain available only for
+audit and sensitivity work.
 
 ### FakeHealth
 
@@ -221,9 +223,7 @@ Current top-level structure:
     ├── dataset_acquisition_manifest.md
     ├── final_literature_brainstorming_document.md
     ├── independent_study_evaluation_metrics.md
-    ├── independent_study_execution_plan.md
     ├── independent_study_project_context.md
-    ├── independent_study_working_log.md
     ├── literature_mds/
     ├── literature_pdfs/
     └── literature_review/
@@ -251,13 +251,16 @@ python scripts/download_datasets.py --all --extract
 
 Use the script as the source of truth for where datasets come from. Notebooks may be added later for exploration, but dataset acquisition and preprocessing should live in `.py` files so the workflow is reproducible from a clean clone.
 
-The repository does not yet contain the planned analysis notebooks, processed data, or results. The strict Python environment specification is tracked in `.python-version`, `pyproject.toml`, `uv.lock`, `requirements.txt`, and `requirements.lock.txt`.
+Processed data and generated results are produced locally and ignored by Git.
+The strict Python environment specification is tracked in `.python-version`,
+`pyproject.toml`, `uv.lock`, `requirements.txt`, and
+`requirements.lock.txt`.
 
 ---
 
 ## Research workflow
 
-The authoritative protocol is [docs/independent_study_execution_plan.md](docs/independent_study_execution_plan.md).
+The authoritative protocol and its decision log are maintained locally.
 
 The study proceeds through the following stages:
 
@@ -276,23 +279,27 @@ The study proceeds through the following stages:
 
 4. **Cleaning and profiling**
    - Parse text and metadata.
-   - quantify missingness, class balance, text lengths, sources, dates, duplicates, and engagement coverage.
+   - Quantify empty-string-aware missingness, class balance, text lengths, sources, dates, duplicates, and engagement coverage.
+   - Exclude scraper/interface pages, non-substantive bodies, contradictory exact duplicates, and redundant exact copies using coded reasons.
+   - Keep CoAID claims and title-only items outside the primary cohort.
 
 5. **Leakage audit and controlled splits**
-   - Detect outcome-bearing fields and duplicate families.
-   - Freeze standard and artifact-controlled split manifests.
+   - Canonicalize publisher aliases, domains, and archived URLs.
+   - Construct connected URL/title/body/text families.
+   - Freeze unit-by-label family-safe manifests.
+   - Use canonical-publisher-disjoint evaluation only where the validity gates pass; otherwise use the declared controlled-design fallback without relabeling it.
 
 6. **Traditional text baselines**
    - Train and evaluate TF-IDF Logistic Regression and Linear SVM.
 
 7. **Transformer evaluation**
-   - Fine-tune DistilBERT on the same frozen records.
+   - Compare pinned DistilBERT, ModernBERT, and BiomedBERT systems at 512 tokens and three seeds.
 
 8. **Engagement ablations**
    - Compare text-only, engagement-only, and combined models where metadata are sufficient.
 
 9. **Cross-dataset transfer**
-   - Test CoAID-to-FakeHealth and FakeHealth-to-CoAID transfer if the compatibility gate passes.
+   - Diagnose CoAID-to-FakeHealth and FakeHealth-to-CoAID transfer after filtering overlapping source domains.
 
 10. **Narrative discovery**
     - Use BERTopic and qualitative validation to identify candidate narratives.
@@ -306,11 +313,11 @@ The study proceeds through the following stages:
 13. **Synthesis and reporting**
     - Answer every research question and translate findings into practical recommendations.
 
-Each stage has prerequisites, required artifacts, decision gates, and an objective definition of done in the execution plan.
+Each stage has prerequisites, required artifacts, decision gates, and an objective definition of done in the local study protocol.
 
 ## Study quality audit
 
-Known scientific and reproducibility risks are tracked in [docs/study_quality_audit.md](docs/study_quality_audit.md). The audit distinguishes issues fixed in the current repository from remaining limits that must be addressed or explicitly disclosed before final claims.
+A local-only study-quality audit distinguishes repaired pipeline defects from remaining scientific limits. The current repository now enforces substantive-text filtering, deterministic exact-deduplication, parent-family split protection, honest controlled-split naming, validation-based baseline tuning, group-aware uncertainty, and experiment metadata. Remaining limits are stated in the current-status section and local study records.
 
 ## Planned models and analyses
 
@@ -321,7 +328,9 @@ Known scientific and reproducibility risks are tracked in [docs/study_quality_au
 | Sanity-check baseline | Majority-class prediction |
 | Primary traditional baseline | Word/bigram TF-IDF with Logistic Regression |
 | Secondary traditional baseline | Word/bigram TF-IDF with Linear SVM |
-| Transformer benchmark | Fine-tuned DistilBERT |
+| Nonsemantic controls | Publisher-only, unit-only, and length-only Logistic Regression |
+| Text ablations | Title-only and body-only Logistic Regression |
+| Transformer benchmarks | Pinned DistilBERT, ModernBERT, and BiomedBERT |
 | Engagement-only model | Logistic Regression on structured engagement features |
 | Combined model | Text-model scores plus standardized engagement features |
 
@@ -331,12 +340,20 @@ Additional models are optional and may not replace the required comparisons.
 
 The evaluation will compare a standard stratified split against the strongest feasible controlled design:
 
-1. source-disjoint split;
+1. canonical-publisher-disjoint split;
 2. topic-held-out split;
 3. temporal split;
 4. artifact-masking sensitivity analysis when grouped splits are not feasible.
 
 Publisher names, URLs, explicit source identifiers, review scores, verdict text, and other outcome-bearing fields are excluded from core text-model inputs.
+
+The current primary cohort supports a canonical-publisher-disjoint split for
+FakeHealth, with ten distinct valid allocations used to quantify split
+sensitivity. CoAID cannot meet the frozen publisher-separation, prevalence,
+concentration, and sample-size gates; its controlled condition is explicitly a
+temporal family-disjoint fallback. Artifact removal deletes spans without
+inserting learnable placeholder tokens; it remains a sensitivity analysis
+rather than proof that the remaining language is causally meaningful.
 
 ### Engagement analysis
 
@@ -347,7 +364,12 @@ Potential features include:
 - temporal rates and burstiness;
 - aggregate user or network indicators when already available and ethically usable.
 
-Engagement modeling is conditional. It proceeds only if coverage and per-class sample-size requirements in the execution plan are met. The project will not purchase API access merely to force this analysis.
+Engagement modeling is conditional. It proceeds only if coverage and per-class sample-size requirements in the local study protocol are met. The project will not purchase API access merely to force this analysis.
+
+FakeHealth passes the coverage gate and its matched complete-case ablation has
+been run. Engagement-ID counts alone underperform text, and adding them to text
+does not produce a reliable paired macro-F1 improvement. CoAID remains gated
+because engagement availability differs substantially by label.
 
 ### Narrative analysis
 
@@ -407,7 +429,7 @@ Confidence quality will be evaluated using:
 - confidence histograms;
 - pre- and post-calibration comparisons.
 
-Platt scaling is the default calibration method. Isotonic regression is conditional on sufficient validation data.
+The validation set is divided into calibration-fitting and method/threshold-selection halves. Platt scaling is the default learned calibrator; isotonic regression is conditional on sufficient calibration-fit data.
 
 ### Selective prediction
 
@@ -484,23 +506,23 @@ Raw data under `data/raw/` must remain unchanged. Derived files should eventuall
 
 | Document | Purpose |
 |---|---|
-| [Execution plan](docs/independent_study_execution_plan.md) | Authoritative operational protocol, gates, experiments, and completion criteria |
 | [Project context](docs/independent_study_project_context.md) | Broad project background, motivation, methodology options, timeline, and report planning |
 | [Literature synthesis](docs/literature_review/literature_review_synthesis.md) | Thematic synthesis supporting the research design |
 | [Literature brainstorming](docs/final_literature_brainstorming_document.md) | Dataset, method, contribution, and scope implications drawn from the reviewed literature |
 | [Evaluation metrics](docs/independent_study_evaluation_metrics.md) | Compact record of the original model-evaluation criteria |
 | [Dataset manifest](docs/dataset_acquisition_manifest.md) | Official sources, revisions, checksums, file counts, and acquisition decisions |
-| [Working log](docs/independent_study_working_log.md) | Dated progress notes, decisions, blockers, and next actions |
 | `docs/literature_review/` | Per-paper analytical review notes |
 | `docs/literature_mds/` | Converted source text for local searching and reference |
 | `docs/literature_pdfs/` | Original article PDFs |
 
-When documents conflict, use the following precedence:
+The execution protocol, detailed decision log, working log, study-quality audit,
+future-model plan, and draft final report are maintained locally and are not
+published in the repository. For public documentation conflicts, use the
+following precedence:
 
-1. execution plan and its dated decision log;
-2. dataset acquisition manifest for source revisions and acquisition facts;
-3. working log for later documented decisions;
-4. project context for broader background and earlier planning material.
+1. dataset acquisition manifest for source revisions and acquisition facts;
+2. project context for broader background and earlier planning material;
+3. this README for current public-facing status.
 
 ---
 
@@ -524,22 +546,37 @@ When documents conflict, use the following precedence:
 - [x] Field-level inventory generated locally.
 - [x] Label provenance and harmonized mappings generated locally.
 - [x] Processed analysis tables and profile reports generated locally.
-- [x] Leakage audit and frozen split manifests generated locally.
-- [x] Traditional text baselines completed locally.
-- [x] Transformer compute-stop note generated because local transformer dependencies are unavailable.
+- [x] Primary cohort restricted to substantive CoAID articles and substantive FakeHealth stories/releases.
+- [x] FakeHealth epoch dates normalized and CoAID publication dates prioritized over collection dates.
+- [x] Publisher aliases and archived target domains canonicalized.
+- [x] Scraper/interface pages and near-empty CoAID content excluded with coded reasons.
+- [x] Contradictory and redundant exact duplicates excluded deterministically.
+- [x] Empty strings incorporated into missingness reporting.
+- [x] Connected-family standard manifests generated locally for both datasets.
+- [x] FakeHealth canonical-publisher-disjoint manifest and ten distinct valid allocations generated locally.
+- [x] CoAID publisher-disjoint infeasibility recorded under frozen gates; temporal family-disjoint fallback generated without overstating the control.
+- [x] Traditional text baselines tuned on validation data and rerun locally.
+- [x] Publisher-, unit-, length-, title-, and body-only controls completed locally.
+- [x] FakeHealth rating-3 common-test sensitivity completed locally.
+- [x] Group-aware bootstrap intervals and paired model differences completed locally.
+- [x] Calibration fit and method/threshold selection separated within validation.
+- [x] Calibration, reliability, operating-point, and selective-prediction outputs completed for Logistic Regression and Linear SVM.
+- [x] Bidirectional cross-dataset transfer diagnostics completed after source-domain overlap filtering.
+- [x] FakeHealth matched complete-case text, engagement, and combined ablations completed.
+- [x] Artifact-feature and text-unit subgroup audit outputs generated locally.
+- [x] Globally deduplicated, blinded two-reviewer error-audit instrument generated locally.
+- [x] DistilBERT, ModernBERT, and BiomedBERT checkpoints pinned in configuration.
+- [x] Transformer execution now returns a nonzero status and machine-readable failure record when incomplete.
 
 ### Next
 
-- [ ] Install `torch`, `transformers`, `datasets`, and `evaluate`, then rerun `scripts/06_run_transformer.py`.
-- [ ] Review Phase 5 baseline results and decide how to report the first-half milestone.
-- [ ] Decide whether to begin Phase 7 engagement ablations.
+- [ ] Provision the locked Python 3.11 environment and suitable accelerator, then rerun `scripts/06_run_transformer.py`.
+- [ ] Conduct the required qualitative high-confidence-error and deferred-case audit.
 
 ### Later
 
-- [ ] Fine-tune DistilBERT.
-- [ ] Run engagement ablations.
-- [ ] Conduct transfer and narrative analyses.
-- [ ] Evaluate calibration and selective prediction.
+- [ ] Fine-tune DistilBERT, ModernBERT, and BiomedBERT at a common 512-token context.
+- [ ] Conduct validated narrative analysis.
 - [ ] Complete explanation and error audits.
 - [ ] Produce the final report and recommendations.
 
@@ -577,20 +614,32 @@ python scripts/03_build_processed_tables.py
 python scripts/04_make_splits.py
 python scripts/05_run_text_baselines.py
 python scripts/06_run_transformer.py
-python -m pytest
+python scripts/07_run_calibration_selective.py
+python scripts/08_prepare_error_audit.py
+python scripts/09_summarize_study.py
+python scripts/10_run_cross_dataset_transfer.py
+python scripts/11_run_engagement_ablation.py
+python -m pytest -q
 ```
 
 Current local execution status:
 
 - Phase 1 inventory completed.
 - Phase 2 provenance and label outputs completed.
-- Phase 3 processed tables completed with 8,271 included records.
-- Phase 4 frozen split manifests completed.
-- Phase 5 traditional text baselines completed with 18 experiment outputs.
-- Phase 6 produced a compute-stop note because local transformer dependencies are not installed.
-- Test suite passes: 10 tests.
+- Phase 3 parsed 8,271 records and retained 5,192 primary records: 3,055 CoAID articles and 2,137 FakeHealth items.
+- Phase 4 produced family-safe standard splits, a FakeHealth canonical-publisher-disjoint split with ten valid repetitions, and temporal family-disjoint manifests. CoAID correctly falls back to temporal evaluation because no publisher-disjoint allocation passes the frozen gates.
+- Phase 5 produced 70 versioned traditional-model and sensitivity experiments plus FakeHealth repeated-split summaries.
+- Phase 6 returned status 2 and a machine-readable stop record because the locked transformer stack is unavailable in the active environment.
+- Calibration and selective-prediction outputs were generated for 20 calibratable baseline experiments.
+- Eight bidirectional transfer diagnostics and six FakeHealth engagement ablations were completed locally.
+- A 433-case globally unique blinded instrument was generated for required human qualitative coding; it is not yet a completed error audit.
+- Test suite passes: 26 tests.
 
-The local environment used for this run has the classical ML stack installed, but is missing `torch`, `transformers`, `datasets`, and `evaluate`. Re-run `scripts/06_run_transformer.py` after installing those packages to attempt local DistilBERT training.
+The authoritative linear rerun used Python 3.12.11, pandas 2.2.3, and
+scikit-learn 1.6.1. The declared archive environment is Python 3.11.15 and must
+be provisioned before the final archival rerun. The active environment is also
+missing the transformer stack; no transformer result should be inferred from
+the compute-stop record.
 
 Generated outputs are intentionally ignored by Git. The committed repository contains code, configs, tests, and documentation; it does not contain raw data, processed tables, model outputs, or predictions.
 
@@ -627,7 +676,7 @@ The practical target is decision support and triage, not autonomous adjudication
 
 ### Derived data
 
-Future derived data should be separated into:
+Derived data are separated into:
 
 - `data/interim/` for parsed or partially transformed records;
 - `data/processed/` for analysis-ready tables;
