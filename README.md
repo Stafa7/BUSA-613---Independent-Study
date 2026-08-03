@@ -385,15 +385,14 @@ A topic must not be interpreted as support for misinformation merely because it 
 
 ### Explainability and error analysis
 
-Planned methods include:
+Implemented methods include:
 
 - signed Logistic Regression coefficients;
 - signed Linear SVM feature weights;
-- SHAP explanations;
-- LIME where appropriate;
 - stratified qualitative case review;
 - a coded error taxonomy;
-- comparisons of explanations across models, splits, and datasets.
+- signed local TF-IDF contributions for frozen sparse-model predictions;
+- comparisons of explanations across sparse models, splits, and datasets.
 
 Attention weights alone will not be treated as explanations.
 
@@ -512,8 +511,8 @@ Raw data under `data/raw/` must remain unchanged. Derived files should eventuall
 
 | Document | Purpose |
 |---|---|
+| [Final report](reports/final_report.pdf) | Five-page final study report, excluding its APA title and reference pages |
 | [Project context](docs/independent_study_project_context.md) | Broad project background, motivation, methodology options, timeline, and report planning |
-| [Literature synthesis](docs/literature_review/literature_review_synthesis.md) | Thematic synthesis supporting the research design |
 | [Literature brainstorming](docs/final_literature_brainstorming_document.md) | Dataset, method, contribution, and scope implications drawn from the reviewed literature |
 | [Evaluation metrics](docs/independent_study_evaluation_metrics.md) | Compact record of the original model-evaluation criteria |
 | [Dataset manifest](docs/dataset_acquisition_manifest.md) | Official sources, revisions, checksums, file counts, and acquisition decisions |
@@ -525,9 +524,9 @@ Raw data under `data/raw/` must remain unchanged. Derived files should eventuall
 | `docs/literature_pdfs/` | Original article PDFs |
 
 The execution protocol, detailed decision log, working log, study-quality audit,
-future-model plan, and draft final report are maintained locally and are not
-published in the repository. For public documentation conflicts, use the
-following precedence:
+and future-model plan are maintained locally. The approved final report is
+published as a PDF while its LaTeX source and build files remain local. For
+public documentation conflicts, use the following precedence:
 
 1. dataset acquisition manifest for source revisions and acquisition facts;
 2. project context for broader background and earlier planning material;
@@ -589,20 +588,13 @@ following precedence:
 - [x] Revealed Error Stage B completed through generated proposals and explicit human confirmation; all 80 cases finalized.
 - [x] Paired study summaries regenerated and the final results record reconciled against the completed qualitative outputs.
 
-### Next
-
-- [x] Complete the ordered human-review workflow in
-  [`docs/manual_review_guide.md`](docs/manual_review_guide.md).
-
-### Later
-
-- [x] Produce the final report and recommendations.
+- [x] Final five-page report and recommendations produced and published as PDF.
 
 ---
 
 ## Environment and execution
 
-The executable first-half analysis pipeline is implemented as Python package code plus phase scripts. Notebooks may be used for review, but the reproducible source of truth is the script pipeline.
+The complete analysis pipeline is implemented as Python package code plus phase scripts. Notebooks may be used for review, but the reproducible source of truth is the script pipeline.
 
 The strict runtime is Python `3.11.15`, recorded in `.python-version`. The exact
 resolved dependency graph is committed in `uv.lock`; hash-checked pip exports
@@ -776,7 +768,8 @@ Dataset: <https://github.com/cuilimeng/CoAID>
 
 ### FakeHealth
 
-Dai, E., Sun, Y., & Wang, S. (2020). *Ginger Cannot Cure Cancer: Battling Fake Health News with a Comprehensive Data Repository*. arXiv:2002.00837.  
+Dai, E., Sun, Y., & Wang, S. (2020). *Ginger Cannot Cure Cancer: Battling Fake Health News with a Comprehensive Data Repository*. *Proceedings of the International AAAI Conference on Web and Social Media, 14*(1), 853–862. <https://doi.org/10.1609/icwsm.v14i1.7350>
+
 Dataset repository: <https://github.com/EnyanDai/FakeHealth>  
 Dataset archive: <https://zenodo.org/records/3862989>
 
@@ -784,9 +777,13 @@ Dataset archive: <https://zenodo.org/records/3862989>
 @article{dai2020ginger,
   title   = {Ginger Cannot Cure Cancer: Battling Fake Health News with a Comprehensive Data Repository},
   author  = {Dai, Enyan and Sun, Yiwei and Wang, Suhang},
-  journal = {arXiv preprint arXiv:2002.00837},
+  journal = {Proceedings of the International AAAI Conference on Web and Social Media},
+  volume  = {14},
+  number  = {1},
+  pages   = {853--862},
+  doi     = {10.1609/icwsm.v14i1.7350},
   year    = {2020}
 }
 ```
 
-Additional literature used to motivate the methodology and robustness framework is documented in `docs/literature_review/`.
+Additional literature used to motivate the methodology and robustness framework is summarized in the tracked literature brainstorming document and cited in the final report.
