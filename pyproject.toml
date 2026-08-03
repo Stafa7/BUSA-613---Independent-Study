@@ -23,6 +23,14 @@ dependencies = [
     "transformers",
 ]
 
+[project.optional-dependencies]
+narratives = [
+    "bertopic",
+    "hdbscan",
+    "sentence-transformers",
+    "umap-learn",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

@@ -13,8 +13,10 @@ from health_misinfo.config import load_experiments, load_paths
 from health_misinfo.features.leakage import count_outcome_terms
 from health_misinfo.paths import ensure_project_dirs
 from health_misinfo.splits import (
+    SplitSettings,
     controlled_split_or_unavailable,
     grouped_stratified_split,
+    hosting_domain_disjoint_split_or_unavailable,
     repeated_publisher_disjoint_splits,
     split_distribution,
     temporal_split_or_unavailable,
@@ -46,31 +48,66 @@ def main() -> int:
     paths = load_paths()
     config = load_experiments()
     seed = int(config["random_seed"])
-    source_disjoint_repeats = int(config["split"]["source_disjoint_repeats"])
+    split_settings = SplitSettings.from_mapping(config["split"])
     combined = pd.read_parquet(paths["data_processed"] / "combined_items.parquet")
     included = combined[combined["primary_eligible"]].copy()
     standard_manifests = []
     controlled_manifests = []
     repeated_controlled_manifests = []
+    domain_sensitivity_manifests = []
     temporal_manifests = []
     temporal_decision_rows = []
+    domain_sensitivity_decision_rows = []
     decision_rows = []
     for dataset, df in included.groupby("dataset"):
-        standard = grouped_stratified_split(df, seed=seed)
+        standard = grouped_stratified_split(
+            df,
+            seed=seed,
+            settings=split_settings,
+        )
         standard["dataset"] = dataset
         standard_manifests.append(standard)
-        controlled, decisions = controlled_split_or_unavailable(df, seed=seed)
+        controlled, decisions = controlled_split_or_unavailable(
+            df,
+            seed=seed,
+            settings=split_settings,
+        )
         if controlled is not None:
             controlled["dataset"] = dataset
             controlled_manifests.append(controlled)
         repeated = repeated_publisher_disjoint_splits(
             df,
             seed=seed,
-            repeats=source_disjoint_repeats,
+            settings=split_settings,
         )
         if len(repeated):
             repeated_controlled_manifests.append(repeated)
-        temporal, temporal_decision = temporal_split_or_unavailable(df)
+        domain_sensitivity, domain_decision = (
+            hosting_domain_disjoint_split_or_unavailable(
+                df,
+                seed=seed,
+                settings=split_settings,
+            )
+        )
+        if domain_sensitivity is not None:
+            domain_sensitivity["dataset"] = dataset
+            domain_sensitivity_manifests.append(domain_sensitivity)
+        domain_sensitivity_decision_rows.append(
+            {
+                "dataset": dataset,
+                "status": domain_decision.status,
+                "split_type": domain_decision.split_type,
+                "group_field": domain_decision.group_field,
+                "excluded_missing_domain_records": (
+                    domain_decision.excluded_missing_group_records
+                ),
+                "available": domain_sensitivity is not None,
+            }
+        )
+        temporal, temporal_decision = temporal_split_or_unavailable(
+            df,
+            settings=split_settings,
+        )
         if temporal is not None:
             temporal["dataset"] = dataset
             temporal_manifests.append(temporal)
@@ -110,6 +147,11 @@ def main() -> int:
         if repeated_controlled_manifests
         else pd.DataFrame()
     )
+    domain_sensitivity_all = (
+        pd.concat(domain_sensitivity_manifests, ignore_index=True)
+        if domain_sensitivity_manifests
+        else standard_all.iloc[0:0].copy()
+    )
     temporal_all = (
         pd.concat(temporal_manifests, ignore_index=True)
         if temporal_manifests
@@ -122,6 +164,10 @@ def main() -> int:
     _write_manifest(controlled_all, paths["splits"] / "controlled_split_manifest.csv")
     _write_manifest(masked_all, paths["splits"] / "artifact_masked_split_manifest.csv")
     _write_manifest(temporal_all, paths["splits"] / "temporal_split_manifest.csv")
+    _write_manifest(
+        domain_sensitivity_all,
+        paths["splits"] / "hosting_domain_disjoint_sensitivity_manifest.csv",
+    )
     repeated_controlled_all.to_csv(
         paths["splits"] / "controlled_split_repeats.csv",
         index=False,
@@ -131,12 +177,18 @@ def main() -> int:
         manifests_for_distribution.append(controlled_all)
     if len(temporal_all):
         manifests_for_distribution.append(temporal_all)
+    if len(domain_sensitivity_all):
+        manifests_for_distribution.append(domain_sensitivity_all)
     distribution = pd.concat([split_distribution(m) for m in manifests_for_distribution], ignore_index=True)
     distribution.to_csv(paths["splits"] / "split_distribution_table.csv", index=False)
     decisions_frame = pd.DataFrame(decision_rows)
     decisions_frame.to_csv(paths["splits"] / "controlled_split_decisions.csv", index=False)
     pd.DataFrame(temporal_decision_rows).to_csv(
         paths["splits"] / "temporal_split_decisions.csv",
+        index=False,
+    )
+    pd.DataFrame(domain_sensitivity_decision_rows).to_csv(
+        paths["splits"] / "hosting_domain_disjoint_sensitivity_decisions.csv",
         index=False,
     )
 
@@ -146,6 +198,7 @@ def main() -> int:
         ("controlled", controlled_all),
         ("masked", masked_all),
         ("temporal", temporal_all),
+        ("hosting_domain_sensitivity", domain_sensitivity_all),
     ]:
         for dataset, df in manifest.groupby("dataset"):
             total = len(df)
@@ -162,6 +215,7 @@ def main() -> int:
                         "record_fraction": len(split) / total,
                         "unreliable_fraction": split["harmonized_label"].eq("unreliable").mean(),
                         "unique_publishers": split["publisher_id"].replace("", pd.NA).nunique(),
+                        "unique_domains": split["source_domain"].replace("", pd.NA).nunique(),
                         "unique_families": split["family_group"].nunique(),
                         "bootstrap_groups": int(len(group_sizes)),
                         "effective_bootstrap_groups": float(
@@ -180,6 +234,9 @@ def main() -> int:
                 "records_with_url": int(df["url"].fillna("").astype(str).str.len().gt(0).sum()),
                 "records_with_source_name": int(df["source_name"].fillna("").astype(str).str.len().gt(0).sum()),
                 "records_with_publisher_id": int(df["publisher_id"].fillna("").astype(str).str.len().gt(0).sum()),
+                "records_with_source_domain": int(
+                    df["source_domain"].fillna("").astype(str).str.len().gt(0).sum()
+                ),
                 "outcome_term_hits_in_model_text": int(df["model_text"].map(count_outcome_terms).sum()),
                 "outcome_term_hits_in_masked_text": int(df["model_text_masked"].map(count_outcome_terms).sum()),
                 "mask_marker_hits": int(
@@ -206,6 +263,7 @@ This is a sensitivity input, not the primary text representation. Scraper and in
         ("standard", standard_all),
         ("controlled", controlled_all),
         ("temporal", temporal_all),
+        ("hosting_domain_sensitivity", domain_sensitivity_all),
     ]:
         for dataset, dataset_manifest in manifest.groupby("dataset"):
             group_field = str(dataset_manifest["group_field"].iloc[0])
@@ -222,8 +280,30 @@ This is a sensitivity input, not the primary text representation. Scraper and in
                     ),
                     "max_publisher_split_count": (
                         int(dataset_manifest.groupby("publisher_id")["split"].nunique().max())
-                        if manifest_name == "controlled"
+                        if group_field == "publisher_id"
                         else pd.NA
+                    ),
+                    "max_domain_split_count": (
+                        int(
+                            dataset_manifest[
+                                dataset_manifest["source_domain"].fillna("").ne("")
+                            ]
+                            .groupby("source_domain")["split"]
+                            .nunique()
+                            .max()
+                        )
+                        if group_field == "source_domain"
+                        else pd.NA
+                    ),
+                    "crossing_credited_publishers": int(
+                        (
+                            dataset_manifest[
+                                dataset_manifest["publisher_id"].fillna("").ne("")
+                            ]
+                            .groupby("publisher_id")["split"]
+                            .nunique()
+                            .gt(1)
+                        ).sum()
                     ),
                     "crossing_url_domains": int(
                         (
@@ -255,6 +335,10 @@ This is a sensitivity input, not the primary text representation. Scraper and in
         "# Leakage and controlled-split audit\n\n"
         + "\n".join(selected_notes)
         + "\n\nFull gate decisions are available in `controlled_split_decisions.csv`. "
+        "The separately named hosting-domain sensitivity and its availability "
+        "decision are recorded in "
+        "`hosting_domain_disjoint_sensitivity_decisions.csv` without relabeling "
+        "the credited-publisher design. "
         "Outcome-term counts are available in `leakage_audit_table.csv`.\n"
     )
     (paths["splits"] / "leakage_audit.md").write_text(audit, encoding="utf-8")

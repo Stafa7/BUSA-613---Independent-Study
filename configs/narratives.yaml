@@ -1,0 +1,30 @@
+random_seed: 613
+thresholds:
+  minimum_fit_documents: 200
+  minimum_topic_documents: 30
+  minimum_representatives: 5
+  minimum_performance_records: 20
+  minimum_performance_per_class: 5
+  minimum_metadata_complete_per_group: 30
+representatives_per_topic: 10
+human_review:
+  reviewer_count: 1
+  required_confirmation: human_reviewed
+  files:
+    instructions: START_HERE_HUMAN_REVIEW.md
+    representative_documents: 01_HUMAN_REVIEW_representative_documents.csv
+    topic_decisions: 02_HUMAN_REVIEW_topic_decisions.csv
+embedding_model:
+  name: sentence-transformers/all-MiniLM-L6-v2
+  revision: c9745ed1d9f207416be6d2e6f8de32d1f16199bf
+bertopic:
+  top_n_words: 10
+  ngram_range: [1, 2]
+  umap:
+    n_neighbors: 15
+    n_components: 5
+    min_dist: 0.0
+    metric: cosine
+  hdbscan:
+    metric: euclidean
+    cluster_selection_method: eom

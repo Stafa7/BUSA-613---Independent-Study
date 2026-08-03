@@ -6,7 +6,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
@@ -32,16 +31,25 @@ COMMON_SECOND_LEVEL_SUFFIXES = {
 }
 GENERIC_ARCHIVE_DOMAINS = {"archive.org", "web.archive.org"}
 PUBLISHER_ALIASES = {
+    "abc news": "abcnews",
+    "abcnews go": "abcnews",
+    "ap associated press": "ap",
     "health day": "healthday",
     "healthday news": "healthday",
     "healthdaynews": "healthday",
     "reuters health": "reuters",
     "reutershealth": "reuters",
     "associated press": "ap",
+    "associated press ap": "ap",
     "the associated press": "ap",
     "cnn health": "cnn",
     "cbs news": "cbsnews",
     "cbsnews": "cbsnews",
+    "centers for disease control and prevention": "cdc",
+    "national institutes of health": "nih",
+    "nih national institutes of health": "nih",
+    "u s food and drug administration": "fda",
+    "us food and drug administration": "fda",
 }
 GENERIC_SOURCE_NAMES = {
     "https web archive",
@@ -79,7 +87,14 @@ class _DisjointSet:
 
 
 def normalize_publisher_name(value: object) -> str:
-    normalized = normalized_text(value)
+    raw = clean_text(value)
+    normalized = normalized_text(raw)
+    # A small number of source fields contain a URL instead of a credited name.
+    # Remove only unambiguous URL boilerplate; the explicit alias table handles
+    # known host labels that differ from the corresponding publisher name.
+    if re.match(r"^(?:(?:https?|ftp)://|www\.)", raw, flags=re.IGNORECASE):
+        normalized = re.sub(r"^(?:https?|ftp)\s+(?:www\s+)?", "", normalized)
+        normalized = re.sub(r"^www\s+", "", normalized)
     normalized = re.sub(r"^the\s+", "", normalized)
     normalized = re.sub(r"\s+(?:com|org|net)$", "", normalized)
     normalized = re.sub(
@@ -93,13 +108,21 @@ def normalize_publisher_name(value: object) -> str:
 
 
 def registrable_domain(value: object) -> str:
-    canonical = canonical_article_url(value)
-    if not canonical:
+    url = clean_text(value)
+    if not url:
         return ""
-    host = urlsplit(canonical).netloc.lower().split(":", 1)[0]
+    archive_match = re.search(
+        r"https?://web\.archive\.org/web/(?:\d+|[a-z_]+)/(?P<target>https?://.+)",
+        url,
+        flags=re.IGNORECASE,
+    )
+    if archive_match:
+        url = archive_match.group("target")
+    parsed = urlsplit(url if "://" in url else f"https://{url}")
+    host = parsed.netloc.lower().split(":", 1)[0]
     if host.startswith("www."):
         host = host[4:]
-    if host in GENERIC_ARCHIVE_DOMAINS:
+    if not host or host in GENERIC_ARCHIVE_DOMAINS:
         return ""
     labels = [part for part in host.split(".") if part]
     if len(labels) <= 2:
@@ -110,43 +133,15 @@ def registrable_domain(value: object) -> str:
     return last_two
 
 
-def _publisher_components(dataset: pd.DataFrame) -> tuple[dict[str, str], dict[int, set[str]]]:
-    node_index: dict[str, int] = {}
-    record_nodes: dict[int, set[str]] = defaultdict(set)
-
-    def node_id(key: str) -> int:
-        if key not in node_index:
-            node_index[key] = len(node_index)
-        return node_index[key]
-
-    edges: list[tuple[int, int]] = []
-    for row_index, row in dataset.iterrows():
-        source = normalize_publisher_name(row.get("source_name", ""))
-        domain = registrable_domain(row.get("url", ""))
-        nodes: list[str] = []
-        if source:
-            nodes.append(f"name:{source}")
-        if domain:
-            nodes.append(f"domain:{domain}")
-        record_nodes[row_index].update(nodes)
-        ids = [node_id(key) for key in nodes]
-        if len(ids) > 1:
-            edges.extend((ids[0], other) for other in ids[1:])
-
-    dsu = _DisjointSet.create(len(node_index))
-    for left, right in edges:
-        dsu.union(left, right)
-    component_nodes: dict[int, set[str]] = defaultdict(set)
-    for key, index in node_index.items():
-        component_nodes[dsu.find(index)].add(key)
-    node_to_component = {
-        key: min(component_nodes[dsu.find(index)])
-        for key, index in node_index.items()
-    }
-    return node_to_component, record_nodes
-
-
 def assign_publisher_ids(frame: pd.DataFrame) -> pd.DataFrame:
+    """Assign conservative dataset-local credited-publisher identities.
+
+    CoAID source names are derived from URLs, so its publisher identity is the
+    registrable hosting domain. FakeHealth has an explicit credited-source field:
+    use that normalized name when present and fall back to the hosting domain.
+    Names and domains are deliberately not joined transitively because wire copy
+    and release platforms can host material credited to many distinct publishers.
+    """
     result = frame.copy()
     result["source_name_raw"] = result["source_name"].fillna("").astype(str)
     result["source_name_normalized"] = result["source_name_raw"].map(normalize_publisher_name)

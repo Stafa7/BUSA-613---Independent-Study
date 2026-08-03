@@ -81,41 +81,48 @@ def main() -> int:
     )
 
     control_rows = []
-    for dataset in ("coaid", "fakehealth"):
-        for split in ("standard", "controlled"):
-            text = _predictions(
+    controlled_evaluations = (
+        ("coaid", "standard"),
+        ("coaid", "controlled"),
+        ("fakehealth", "standard"),
+        ("fakehealth", "controlled"),
+        ("fakehealth", "hosting_domain_sensitivity"),
+    )
+    for dataset, split in controlled_evaluations:
+        experiment_id = f"{dataset}_{split}_logistic_regression_model_text"
+        if not (run_root / experiment_id / "predictions.csv").exists():
+            continue
+        text = _predictions(run_root, experiment_id)
+        text_config = yaml.safe_load(
+            (run_root / experiment_id / "config.yaml").read_text(encoding="utf-8")
+        )
+        for control in CONTROLS:
+            control_predictions = _predictions(
                 run_root,
-                f"{dataset}_{split}_logistic_regression_model_text",
+                f"{dataset}_{split}_{control}_"
+                f"{'diagnostic_publisher' if control.startswith('publisher') else 'diagnostic_length'}",
             )
-            text_config = yaml.safe_load(
-                (
-                    run_root
-                    / f"{dataset}_{split}_logistic_regression_model_text"
-                    / "config.yaml"
-                ).read_text(encoding="utf-8")
+            difference = _paired_difference(
+                text,
+                control_predictions,
+                iterations,
+                seed,
             )
-            for control in CONTROLS:
-                control_predictions = _predictions(
-                    run_root,
-                    f"{dataset}_{split}_{control}_"
-                    f"{'diagnostic_publisher' if control.startswith('publisher') else 'diagnostic_length'}",
-                )
-                difference = _paired_difference(
-                    text,
-                    control_predictions,
-                    iterations,
-                    seed,
-                )
-                difference.insert(0, "comparison", f"text_logistic_minus_{control}")
-                difference.insert(
-                    0,
-                    "canonical_publisher_disjoint",
-                    text_config["split_type"] == "canonical_publisher_disjoint",
-                )
-                difference.insert(0, "split_type", text_config["split_type"])
-                difference.insert(0, "split", split)
-                difference.insert(0, "dataset", dataset)
-                control_rows.append(difference)
+            difference.insert(0, "comparison", f"text_logistic_minus_{control}")
+            difference.insert(
+                0,
+                "hosting_domain_disjoint_sensitivity",
+                text_config["split_type"] == "hosting_domain_disjoint_sensitivity",
+            )
+            difference.insert(
+                0,
+                "canonical_publisher_disjoint",
+                text_config["split_type"] == "canonical_publisher_disjoint",
+            )
+            difference.insert(0, "split_type", text_config["split_type"])
+            difference.insert(0, "split", split)
+            difference.insert(0, "dataset", dataset)
+            control_rows.append(difference)
     pd.concat(control_rows, ignore_index=True).to_csv(
         run_root / "confirmatory_control_differences.csv",
         index=False,

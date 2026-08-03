@@ -102,11 +102,61 @@ def reliability_table(labels, probabilities, bins: int = 10) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def threshold_for_coverage(probabilities, coverage: float) -> float:
-    confidence = np.maximum(probabilities, 1 - np.asarray(probabilities))
+def decision_confidence(
+    probabilities,
+    decision_threshold: float = 0.5,
+) -> np.ndarray:
+    """Return confidence in a thresholded decision, normalized within each side.
+
+    A probability exactly on the decision boundary has confidence 0.5. Confidence
+    then increases linearly to 1.0 at the endpoint of either predicted class:
+
+    - below the boundary, distance is scaled by ``decision_threshold``;
+    - at or above the boundary, distance is scaled by ``1 - decision_threshold``.
+
+    This equals ``max(p, 1 - p)`` when the decision threshold is 0.5, while
+    remaining consistent with classifiers whose selected operating threshold is
+    not 0.5.
+    """
+
+    probability = np.asarray(probabilities, dtype=float)
+    threshold = float(decision_threshold)
+    if not np.isfinite(threshold) or not 0.0 <= threshold <= 1.0:
+        raise ValueError("decision_threshold must be finite and between 0 and 1")
+    if np.any(~np.isfinite(probability)):
+        raise ValueError("probabilities must all be finite")
+    if np.any((probability < 0.0) | (probability > 1.0)):
+        raise ValueError("probabilities must all be between 0 and 1")
+
+    relative_margin = np.zeros_like(probability, dtype=float)
+    reliable_side = probability < threshold
+    unreliable_side = ~reliable_side
+    if threshold > 0.0:
+        relative_margin[reliable_side] = (
+            threshold - probability[reliable_side]
+        ) / threshold
+    if threshold < 1.0:
+        relative_margin[unreliable_side] = (
+            probability[unreliable_side] - threshold
+        ) / (1.0 - threshold)
+    return 0.5 + 0.5 * relative_margin
+
+
+def threshold_for_coverage(
+    probabilities,
+    coverage: float,
+    decision_threshold: float = 0.5,
+) -> float:
+    if not np.isfinite(coverage) or not 0.0 < coverage <= 1.0:
+        raise ValueError("coverage must be finite and in (0, 1]")
+    confidence = decision_confidence(probabilities, decision_threshold)
+    if confidence.size == 0:
+        raise ValueError("probabilities must contain at least one value")
     if coverage >= 1:
         return 0.0
-    return float(np.quantile(confidence, 1 - coverage, method="lower"))
+    retained_target = int(np.ceil(coverage * confidence.size))
+    cutoff_index = confidence.size - retained_target
+    return float(np.partition(confidence, cutoff_index)[cutoff_index])
 
 
 def selective_result(
@@ -117,7 +167,11 @@ def selective_result(
 ) -> dict[str, float | int]:
     binary = np.asarray(labels, dtype=int)
     probability = np.asarray(probabilities, dtype=float)
-    confidence = np.maximum(probability, 1 - probability)
+    if binary.shape != probability.shape:
+        raise ValueError("labels and probabilities must have the same shape")
+    if not np.isfinite(confidence_threshold):
+        raise ValueError("confidence_threshold must be finite")
+    confidence = decision_confidence(probability, decision_threshold)
     retained = confidence >= confidence_threshold
     prediction = (probability >= decision_threshold).astype(int)
     if retained.any():
@@ -127,12 +181,28 @@ def selective_result(
         selective_risk = np.nan
         macro_f1 = np.nan
     deferred = ~retained
+    predicted_reliable = prediction == 0
+    predicted_unreliable = prediction == 1
+    normalized_margin = float(np.clip(2.0 * confidence_threshold - 1.0, 0.0, 1.0))
     return {
         "confidence_threshold": confidence_threshold,
         "decision_threshold": decision_threshold,
+        "reliable_probability_ceiling": decision_threshold * (1.0 - normalized_margin),
+        "unreliable_probability_floor": decision_threshold
+        + (1.0 - decision_threshold) * normalized_margin,
         "coverage": float(retained.mean()),
         "automated_records": int(retained.sum()),
         "deferred_records": int(deferred.sum()),
+        "reliable_side_coverage": (
+            float(retained[predicted_reliable].mean())
+            if predicted_reliable.any()
+            else np.nan
+        ),
+        "unreliable_side_coverage": (
+            float(retained[predicted_unreliable].mean())
+            if predicted_unreliable.any()
+            else np.nan
+        ),
         "selective_risk": selective_risk,
         "macro_f1": macro_f1,
         "deferred_error_rate": float((prediction[deferred] != binary[deferred]).mean()) if deferred.any() else np.nan,
